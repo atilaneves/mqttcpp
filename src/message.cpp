@@ -1,32 +1,9 @@
+#include "message.hpp"
 #include "Cereal.hpp"
 #include <vector>
 
-#include <stdint.h>
-
-typedef uint8_t ubyte;
-typedef uint16_t ushort;
-typedef uint32_t uint;
-
 using namespace std;
 
-enum class MqttType {
-    RESERVED1   = 0,
-    CONNECT     = 1,
-    CONNACK     = 2,
-    PUBLISH     = 3,
-    PUBACK      = 4,
-    PUBREC      = 5,
-    PUBREL      = 6,
-    PUBCOMP     = 7,
-    SUBSCRIBE   = 8,
-    SUBACK      = 9,
-    UNSUBSCRIBE = 10,
-    UNSUBACK    = 11,
-    PINGREQ     = 12,
-    PINGRESP    = 13,
-    DISCONNECT  = 14,
-    RESERVED2   = 15
-};
 
 class MqttFixedHeader {
 public:
