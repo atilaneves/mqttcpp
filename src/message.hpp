@@ -2,6 +2,8 @@
 #define MESSAGE_H_
 
 class Cereal;
+class MqttServer;
+class MqttConnection;
 
 #include "dtypes.hpp"
 
@@ -22,6 +24,15 @@ enum class MqttType {
     PINGRESP    = 13,
     DISCONNECT  = 14,
     RESERVED2   = 15
+};
+
+
+class MqttMessage {
+public:
+     virtual void handle(MqttServer& server, MqttConnection& connection) const {
+         (void)server;
+         (void)connection;
+     }
 };
 
 

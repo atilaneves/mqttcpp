@@ -61,43 +61,41 @@ private:
     }
 };
 
-// class MqttMessage {
-//     void handle(MqttServer server, MqttConnection connection) const {}
-// }
+class MqttConnect: public MqttMessage {
+ public:
 
-// class MqttConnect: MqttMessage {
-// public:
+    MqttConnect(MqttFixedHeader h):header(h) { }
 
-//     this(MqttFixedHeader header) {
-//         this.header = header;
-//     }
+    void cerealise(Cereal& cereal) {
+        cereal.grain(header);
+        cereal.grain(protoName);
+        cereal.grain(protoVersion);
+        //TODO: do bits
+        if(hasWill) cereal.grain(willTopic);
+        if(hasWill) cereal.grain(willMessage);
+        if(hasUserName) cereal.grain(userName);
+        if(hasPassword) cereal.grain(password);
+    }
 
-//     void postBlit(Cereal cereal) {
-//         if(hasWill) cereal.grain(willTopic);
-//         if(hasWill) cereal.grain(willMessage);
-//         if(hasUserName) cereal.grain(userName);
-//         if(hasPassword) cereal.grain(password);
-//     }
+    bool isBadClientId() const { return clientId.length() < 1 || clientId.length() > 23; }
 
-//     @property bool isBadClientId() const { return clientId.length < 1 || clientId.length > 23; }
-
-//     MqttFixedHeader header;
-//     string protoName;
-//     ubyte protoVersion;
-//     @Bits!1 bool hasUserName;
-//     @Bits!1 bool hasPassword;
-//     @Bits!1 bool hasWillRetain;
-//     @Bits!2 ubyte willQos;
-//     @Bits!1 bool hasWill;
-//     @Bits!1 bool hasClear;
-//     @Bits!1 bool reserved;
-//     ushort keepAlive;
-//     string clientId;
-//     @NoCereal string willTopic;
-//     @NoCereal string willMessage;
-//     @NoCereal string userName;
-//     @NoCereal string password;
-// }
+    MqttFixedHeader header;
+    string protoName;
+    ubyte protoVersion;
+    bool hasUserName; //1
+    bool hasPassword; //1
+    bool hasWillRetain; //1
+    ubyte willQos; //2
+    bool hasWill; //1
+    bool hasClear; //1
+    bool reserved; //1
+    ushort keepAlive;
+    string clientId;
+    string willTopic;
+    string willMessage;
+    string userName;
+    string password;
+};
 
 // class MqttConnack: MqttMessage {
 
@@ -122,7 +120,7 @@ private:
 //     MqttFixedHeader header;
 //     ubyte reserved;
 //     Code code;
-// }
+// };
 
 
 // class MqttPublish: MqttMessage {
