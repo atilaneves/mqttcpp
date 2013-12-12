@@ -70,7 +70,18 @@ class MqttConnect: public MqttMessage {
         cereal.grain(header);
         cereal.grain(protoName);
         cereal.grain(protoVersion);
-        //TODO: do bits
+
+        cereal.grainBits(hasUserName, 1);
+        cereal.grainBits(hasPassword, 1);
+        cereal.grainBits(hasWillRetain, 1);
+        cereal.grainBits(willQos, 2);
+        cereal.grainBits(hasWill, 1);
+        cereal.grainBits(hasClear, 1);
+        cereal.grainBits(reserved, 1);
+
+        cereal.grain(keepAlive);
+        cereal.grain(clientId);
+
         if(hasWill) cereal.grain(willTopic);
         if(hasWill) cereal.grain(willMessage);
         if(hasUserName) cereal.grain(userName);
