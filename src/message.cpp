@@ -15,6 +15,10 @@ public:
     bool retain;
     uint remaining;
 
+    MqttFixedHeader(MqttType t, bool d, ubyte q, bool rt, uint re):
+        type(t), dup(d), qos(q), retain(rt), remaining(re) {
+    }
+
     void cerealise(Cereal& cereal) {
         cereal.grainBits(type, 4);
         cereal.grainBits(dup, 1);
@@ -112,30 +116,37 @@ class MqttConnect: public MqttMessage {
     string password;
 };
 
-// class MqttConnack: MqttMessage {
 
-//     enum Code: byte {
-//         ACCEPTED = 0,
-//         BAD_VERSION = 1,
-//         BAD_ID = 2,
-//         SERVER_UNAVAILABLE = 3,
-//         BAD_USER_OR_PWD = 4,
-//         NO_AUTH = 5,
-//     }
+class MqttConnack: public MqttMessage {
+public:
+    enum class Code {
+        ACCEPTED = 0,
+        BAD_VERSION = 1,
+        BAD_ID = 2,
+        SERVER_UNAVAILABLE = 3,
+        BAD_USER_OR_PWD = 4,
+        NO_AUTH = 5,
+    };
 
-//     this() {
-//         header = MqttFixedHeader(MqttType.CONNACK, false, 0, false, 2);
-//     }
+    MqttConnack():
+        header(MqttType::CONNACK, false, 0, false, 2) {
+    }
 
-//     this(Code code) {
-//         this.code = code;
-//         this();
-//     }
+    MqttConnack(Code c):
+        MqttConnack() {
+        code = c;
+    }
 
-//     MqttFixedHeader header;
-//     ubyte reserved;
-//     Code code;
-// };
+    void cerealise(Cereal& cereal) {
+        cereal.grain(header);
+        cereal.grain(reserved);
+        cereal.grainBits(code, 8);
+    }
+
+    MqttFixedHeader header;
+    ubyte reserved;
+    Code code;
+};
 
 
 // class MqttPublish: MqttMessage {
