@@ -6,6 +6,8 @@ class MqttServer;
 class MqttConnection;
 
 #include "dtypes.hpp"
+#include <vector>
+#include <string>
 
 enum class MqttType {
     RESERVED1   = 0,
@@ -26,6 +28,27 @@ enum class MqttType {
     RESERVED2   = 15
 };
 
+class MqttFixedHeader {
+public:
+    enum {SIZE = 2};
+
+    MqttType type;
+    bool dup;
+    ubyte qos;
+    bool retain;
+    uint remaining;
+
+    MqttFixedHeader();
+    MqttFixedHeader(MqttType t, bool d, ubyte q, bool rt, uint re);
+
+    void cerealise(Cereal& cereal);
+
+private:
+
+    uint getRemainingSize(Cereal& cereal);
+    void setRemainingSize(Cereal& cereal) const;
+};
+
 
 class MqttMessage {
 public:
@@ -33,6 +56,26 @@ public:
          (void)server;
          (void)connection;
      }
+};
+
+class MqttSubscribe: public MqttMessage {
+public:
+
+    MqttSubscribe(MqttFixedHeader h);
+
+    void handle(MqttServer& server, MqttConnection& connection) const override;
+
+    struct Topic {
+        std::string topic;
+        ubyte qos;
+        void cerealise(Cereal& cereal);
+    };
+
+    void cerealise(Cereal& cereal);
+
+    MqttFixedHeader header;
+    ushort msgId;
+    std::vector<Topic> topics;
 };
 
 

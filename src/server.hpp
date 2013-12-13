@@ -2,14 +2,18 @@
 #define SERVER_H_
 
 #include "dtypes.hpp"
+#include "message.hpp"
 #include <string>
 #include <vector>
 
+
+class MqttConnection;
 
 class MqttServer {
 public:
 
     void publish(std::string topic, std::vector<ubyte> payload);
+    void subscribe(MqttConnection& connection, ushort msgId, std::vector<MqttSubscribe::Topic> topics);
 };
 
 

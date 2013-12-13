@@ -7,73 +7,61 @@
 using namespace std;
 
 
-class MqttFixedHeader {
-public:
-    enum {SIZE = 2};
+MqttFixedHeader::MqttFixedHeader():
+    type(), dup(), qos(), retain(), remaining() {
+}
 
-    MqttType type;
-    bool dup;
-    ubyte qos;
-    bool retain;
-    uint remaining;
+MqttFixedHeader::MqttFixedHeader(MqttType t, bool d, ubyte q, bool rt, uint re):
+    type(t), dup(d), qos(q), retain(rt), remaining(re) {
+}
 
-    MqttFixedHeader():
-        type(), dup(), qos(), retain(), remaining() {
+void MqttFixedHeader::cerealise(Cereal& cereal) {
+    cereal.grainBits(type, 4);
+    cereal.grainBits(dup, 1);
+    cereal.grainBits(qos, 2);
+    cereal.grainBits(retain, 1);
+
+    switch(cereal.getType()) {
+    case Cereal::Type::Write:
+        setRemainingSize(cereal);
+        break;
+
+    case Cereal::Type::Read:
+        remaining = getRemainingSize(cereal);
+        break;
     }
+}
 
-    MqttFixedHeader(MqttType t, bool d, ubyte q, bool rt, uint re):
-        type(t), dup(d), qos(q), retain(rt), remaining(re) {
-    }
+uint MqttFixedHeader::getRemainingSize(Cereal& cereal) {
+    //algorithm straight from the MQTT spec
+    int multiplier = 1;
+    uint value = 0;
+    ubyte digit;
+    do {
+        cereal.grain(digit);
+        value += (digit & 127) * multiplier;
+        multiplier *= 128;
+    } while((digit & 128) != 0);
 
-    void cerealise(Cereal& cereal) {
-        cereal.grainBits(type, 4);
-        cereal.grainBits(dup, 1);
-        cereal.grainBits(qos, 2);
-        cereal.grainBits(retain, 1);
+    return value;
+}
 
-        switch(cereal.getType()) {
-        case Cereal::Type::Write:
-            setRemainingSize(cereal);
-            break;
-
-        case Cereal::Type::Read:
-            remaining = getRemainingSize(cereal);
-            break;
+void MqttFixedHeader::setRemainingSize(Cereal& cereal) const {
+    //algorithm straight from the MQTT spec
+    vector<ubyte> digits;
+    uint x = remaining;
+    do {
+        ubyte digit = x % 128;
+        x /= 128;
+        if(x > 0) {
+            digit = digit | 0x80;
         }
-    }
+        digits.push_back(digit);
+    } while(x > 0);
 
-private:
+    for(auto b: digits) cereal.grain(b);
+}
 
-    uint getRemainingSize(Cereal& cereal) {
-        //algorithm straight from the MQTT spec
-        int multiplier = 1;
-        uint value = 0;
-        ubyte digit;
-        do {
-            cereal.grain(digit);
-            value += (digit & 127) * multiplier;
-            multiplier *= 128;
-        } while((digit & 128) != 0);
-
-        return value;
-    }
-
-    void setRemainingSize(Cereal& cereal) const {
-        //algorithm straight from the MQTT spec
-        vector<ubyte> digits;
-        uint x = remaining;
-        do {
-            ubyte digit = x % 128;
-            x /= 128;
-            if(x > 0) {
-                digit = digit | 0x80;
-            }
-            digits.push_back(digit);
-        } while(x > 0);
-
-        for(auto b: digits) cereal.grain(b);
-    }
-};
 
 class MqttConnect: public MqttMessage {
  public:
@@ -205,25 +193,29 @@ public:
 };
 
 
-// class MqttSubscribe: MqttMessage {
-// public:
-//     this(MqttFixedHeader header) {
-//         this.header = header;
-//     }
+MqttSubscribe::MqttSubscribe(MqttFixedHeader h):header(h) {
 
-//     override void handle(MqttServer server, MqttConnection connection) const {
-//         server.subscribe(connection, msgId, topics);
-//     }
+}
 
-//     static struct Topic {
-//         string topic;
-//         ubyte qos;
-//     }
+void MqttSubscribe::handle(MqttServer& server, MqttConnection& connection) const {
+    server.subscribe(connection, msgId, topics);
+}
 
-//     MqttFixedHeader header;
-//     ushort msgId;
-//     @RawArray Topic[] topics;
-// }
+void MqttSubscribe::Topic::cerealise(Cereal& cereal) {
+    cereal.grain(topic);
+    cereal.grain(qos);
+}
+
+
+void MqttSubscribe::cerealise(Cereal& cereal) {
+    cereal.grain(header);
+    cereal.grain(msgId);
+    ushort size;
+    cereal.grain(size);
+    if(topics.size() != size) topics.resize(size);
+    for(auto& t: topics) cereal.grain(t);
+}
+
 
 // class MqttSuback: MqttMessage {
 // public:
