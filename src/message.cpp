@@ -16,7 +16,11 @@ public:
     uint remaining;
 
     void cerealise(Cereal& cereal) {
-        //custom serialisation needed due to remaining size field
+        cereal.grainBits(type, 4);
+        cereal.grainBits(dup, 1);
+        cereal.grainBits(qos, 2);
+        cereal.grainBits(retain, 1);
+
         switch(cereal.getType()) {
         case Cereal::Type::Write:
             setRemainingSize(cereal);
