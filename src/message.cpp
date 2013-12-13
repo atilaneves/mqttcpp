@@ -1,6 +1,8 @@
 #include "message.hpp"
+#include "server.hpp"
 #include "Cereal.hpp"
 #include <vector>
+#include <iostream>
 
 using namespace std;
 
@@ -14,6 +16,10 @@ public:
     ubyte qos;
     bool retain;
     uint remaining;
+
+    MqttFixedHeader():
+        type(), dup(), qos(), retain(), remaining() {
+    }
 
     MqttFixedHeader(MqttType t, bool d, ubyte q, bool rt, uint re):
         type(t), dup(d), qos(q), retain(rt), remaining(re) {
@@ -149,50 +155,54 @@ public:
 };
 
 
-// class MqttPublish: MqttMessage {
-// public:
-//     this(MqttFixedHeader header) {
-//         this.header = header;
-//     }
+class MqttPublish: public MqttMessage {
+public:
+    MqttPublish(MqttFixedHeader h):header(h) {
 
-//     this(in string topic, in ubyte[] payload, ushort msgId = 0) {
-//         this(false, 0, false, topic, payload, msgId);
-//     }
+    }
 
-//     this(in bool dup, in ubyte qos, in bool retain, in string topic, in ubyte[] payload, in ushort msgId = 0) {
-//         const topicLen = cast(uint)topic.length + 2; //2 for length
-//         auto remaining = qos ? topicLen + 2 /*msgId*/ : topicLen;
-//         remaining += payload.length;
+    MqttPublish(string topic, std::vector<ubyte> payload, ushort msgId = 0):
+        MqttPublish(false, 0, false, topic, payload, msgId) {
+    }
 
-//         this.header = MqttFixedHeader(MqttType.PUBLISH, dup, qos, retain, remaining);
-//         this.topic = topic;
-//         this.payload = payload.dup;
-//         this.msgId = msgId;
-//     }
+    MqttPublish(bool dup, ubyte qos, bool retain, string t, std::vector<ubyte> p, ushort mid = 0) {
+        const auto topicLen = t.length() + 2; //2 for length
+        auto remaining = qos ? topicLen + 2 /*msgId*/ : topicLen;
+        remaining += p.size();
 
-//     void postBlit(Cereal cereal) {
-//         auto payloadLen = header.remaining - (topic.length + MqttFixedHeader.SIZE);
-//         if(header.qos) {
-//             if(header.remaining < 7 && cereal.type == Cereal.Type.Read) {
-//                 stderr.writeln("Error: PUBLISH message with QOS but no message ID");
-//             } else {
-//                 cereal.grain(msgId);
-//                 payloadLen -= 2;
-//             }
-//         }
-//         if(cereal.type == Cereal.Type.Read) payload.length = payloadLen;
-//         foreach(ref b; payload) cereal.grain(b);
-//     }
+        header = MqttFixedHeader(MqttType::PUBLISH, dup, qos, retain, remaining);
+        topic = t;
+        payload = std::move(p);
+        msgId = mid;
+    }
 
-//     override void handle(MqttServer server, MqttConnection connection) const {
-//         server.publish(topic, payload);
-//     }
+    void cerealise(Cereal& cereal) {
+        cereal.grain(header);
+        cereal.grain(topic);
 
-//     MqttFixedHeader header;
-//     string topic;
-//     @NoCereal ubyte[] payload;
-//     @NoCereal ushort msgId;
-// }
+        auto payloadLen = header.remaining - (topic.length() + MqttFixedHeader::SIZE);
+        if(header.qos) {
+            if(header.remaining < 7 && cereal.getType() == Cereal::Type::Read) {
+                cerr << "Error: PUBLISH message with QOS but no message ID" << endl;
+            } else {
+                cereal.grain(msgId);
+                payloadLen -= 2;
+            }
+        }
+        if(cereal.getType() == Cereal::Type::Read) payload.resize(payloadLen);
+        for(auto& b: payload) cereal.grain(b);
+    }
+
+    void handle(MqttServer& server, MqttConnection& connection) const override {
+        (void)connection;
+        server.publish(topic, payload);
+    }
+
+    MqttFixedHeader header;
+    string topic;
+    std::vector<ubyte> payload;
+    ushort msgId;
+};
 
 
 // class MqttSubscribe: MqttMessage {
@@ -222,7 +232,7 @@ public:
 //         this.header = header;
 //     }
 
-//     this(in ushort msgId, in ubyte[] qos) {
+//     this(in ushort msgId, in std::vector<ubyte> qos) {
 //         this.header = MqttFixedHeader(MqttType.SUBACK, false, 0, false, cast(uint)qos.length + 2);
 //         this.msgId = msgId;
 //         this.qos = qos.dup;
@@ -230,7 +240,7 @@ public:
 
 //     MqttFixedHeader header;
 //     ushort msgId;
-//     @RawArray ubyte[] qos;
+//     @RawArray std::vector<ubyte> qos;
 // }
 
 // class MqttUnsubscribe: MqttMessage {
@@ -275,7 +285,7 @@ public:
 // }
 
 // class MqttPingResp: MqttMessage {
-//     const(ubyte[]) encode() const {
+//     const(std::vector<ubyte>) encode() const {
 //         return [0xd0, 0x00];
 //     }
 // }
