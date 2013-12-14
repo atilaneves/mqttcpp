@@ -298,8 +298,9 @@ public:
     }
 };
 
-// class MqttPingResp: MqttMessage {
-//     const(std::vector<ubyte>) encode() const {
-//         return [0xd0, 0x00];
-//     }
-// }
+class MqttPingResp: public MqttMessage {
+public:
+    std::vector<ubyte> encode() const {
+        return std::vector<ubyte>{0xd0, 0x00};
+    }
+};
