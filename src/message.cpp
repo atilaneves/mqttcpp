@@ -217,23 +217,32 @@ void MqttSubscribe::cerealise(Cereal& cereal) {
 }
 
 
-// class MqttSuback: MqttMessage {
-// public:
+class MqttSuback: MqttMessage {
+public:
 
-//     this(MqttFixedHeader header) {
-//         this.header = header;
-//     }
+    MqttSuback(MqttFixedHeader h):header(h) {
 
-//     this(in ushort msgId, in std::vector<ubyte> qos) {
-//         this.header = MqttFixedHeader(MqttType.SUBACK, false, 0, false, cast(uint)qos.length + 2);
-//         this.msgId = msgId;
-//         this.qos = qos.dup;
-//     }
+    }
 
-//     MqttFixedHeader header;
-//     ushort msgId;
-//     @RawArray std::vector<ubyte> qos;
-// }
+    MqttSuback(ushort m, std::vector<ubyte> q):
+        header(MqttType::SUBACK, false, 0, false, qos.size() + 2),
+        msgId(m),
+        qos(std::move(q)) {
+    }
+
+    void cerealise(Cereal& cereal) {
+        cereal.grain(header);
+        cereal.grain(msgId);
+        ushort size;
+        cereal.grain(size);
+        if(qos.size() != size) qos.resize(size);
+        for(auto& q: qos) cereal.grain(q);
+    }
+
+    MqttFixedHeader header;
+    ushort msgId;
+    std::vector<ubyte> qos;
+};
 
 // class MqttUnsubscribe: MqttMessage {
 //     this(MqttFixedHeader header) {
