@@ -13,7 +13,10 @@ class MqttServer {
 public:
 
     void publish(std::string topic, std::vector<ubyte> payload);
-    void subscribe(MqttConnection& connection, ushort msgId, std::vector<MqttSubscribe::Topic> topics);
+    void subscribe(MqttConnection& connection, ushort msgId,
+                   std::vector<MqttSubscribe::Topic> topics);
+    void unsubscribe(MqttConnection& connection, ushort msgId,
+                     std::vector<std::string> topics);
 };
 
 

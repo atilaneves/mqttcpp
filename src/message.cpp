@@ -217,7 +217,7 @@ void MqttSubscribe::cerealise(Cereal& cereal) {
 }
 
 
-class MqttSuback: MqttMessage {
+class MqttSuback: public MqttMessage {
 public:
 
     MqttSuback(MqttFixedHeader h):header(h) {
@@ -244,19 +244,29 @@ public:
     std::vector<ubyte> qos;
 };
 
-// class MqttUnsubscribe: MqttMessage {
-//     this(MqttFixedHeader header) {
-//         this.header = header;
-//     }
+class MqttUnsubscribe: public MqttMessage {
+public:
+    MqttUnsubscribe(MqttFixedHeader h):header(h) {
 
-//     override void handle(MqttServer server, MqttConnection connection) const {
-//         server.unsubscribe(connection, msgId, topics);
-//     }
+    }
 
-//     MqttFixedHeader header;
-//     ushort msgId;
-//     @RawArray string[] topics;
-// }
+    void handle(MqttServer& server, MqttConnection& connection) const override {
+        server.unsubscribe(connection, msgId, topics);
+    }
+
+    void cerealise(Cereal& cereal) {
+        cereal.grain(header);
+        cereal.grain(msgId);
+        ushort size;
+        cereal.grain(size);
+        if(topics.size() != size) topics.resize(size);
+        for(auto& t: topics) cereal.grain(t);
+    }
+
+    MqttFixedHeader header;
+    ushort msgId;
+    std::vector<string> topics;
+};
 
 // class MqttUnsuback: MqttMessage {
 //     this(in ushort msgId) {
