@@ -27,6 +27,7 @@ public:
     void unsubscribe(MqttConnection& connection, ushort msgId,
                      std::vector<std::string> topics);
     void unsubscribe(MqttConnection& connection);
+    void ping(MqttConnection& connection);
 };
 
 

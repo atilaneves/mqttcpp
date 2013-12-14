@@ -29,6 +29,9 @@ void MqttServer::unsubscribe(MqttConnection& connection, ushort msgId,
     (void)topics;
 }
 
+void MqttServer::ping(MqttConnection& connection) {
+    (void)connection;
+}
 
 void MqttServer::unsubscribe(MqttConnection& connection) {
     (void)connection;

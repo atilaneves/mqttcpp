@@ -291,11 +291,12 @@ public:
     }
 };
 
-// class MqttPingReq: MqttMessage {
-//     override void handle(MqttServer server, MqttConnection connection) const {
-//         server.ping(connection);
-//     }
-// }
+class MqttPingReq: public MqttMessage {
+public:
+    void handle(MqttServer& server, MqttConnection& connection) const override {
+        server.ping(connection);
+    }
+};
 
 // class MqttPingResp: MqttMessage {
 //     const(std::vector<ubyte>) encode() const {
