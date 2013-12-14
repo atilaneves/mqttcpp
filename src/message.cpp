@@ -268,19 +268,27 @@ public:
     std::vector<string> topics;
 };
 
-// class MqttUnsuback: MqttMessage {
-//     this(in ushort msgId) {
-//         this.header = MqttFixedHeader(MqttType.UNSUBACK, false, 0, false, 2);
-//         this.msgId = msgId;
-//     }
 
-//     this(MqttFixedHeader header) {
-//         this.header = header;
-//     }
+class MqttUnsuback: public MqttMessage {
+public:
 
-//     MqttFixedHeader header;
-//     ushort msgId;
-// }
+    MqttUnsuback(ushort m):
+        header(MqttType::UNSUBACK, false, 0, false, 2),
+        msgId(m) {
+    }
+
+    MqttUnsuback(MqttFixedHeader h):header(h), msgId() {
+
+    }
+
+    void cerealise(Cereal& cereal) {
+        cereal.grain(header);
+        cereal.grain(msgId);
+    }
+
+    MqttFixedHeader header;
+    ushort msgId;
+};
 
 // class MqttDisconnect: MqttMessage {
 //     override void handle(MqttServer server, MqttConnection connection) const {
