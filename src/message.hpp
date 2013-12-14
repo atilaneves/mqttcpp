@@ -79,5 +79,22 @@ public:
 };
 
 
+class MqttPublish: public MqttMessage {
+public:
+
+    MqttPublish(MqttFixedHeader h);
+    MqttPublish(std::string topic, std::vector<ubyte> payload, ushort msgId = 0);
+    MqttPublish(bool dup, ubyte qos, bool retain, std::string t, std::vector<ubyte> p, ushort mid = 0);
+
+    void cerealise(Cereal& cereal);
+    void handle(MqttServer& server, MqttConnection& connection) const override;
+
+    MqttFixedHeader header;
+    std::string topic;
+    std::vector<ubyte> payload;
+    ushort msgId;
+};
+
+
 
 #endif // MESSAGE_H_

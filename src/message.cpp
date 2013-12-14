@@ -143,54 +143,46 @@ public:
 };
 
 
-class MqttPublish: public MqttMessage {
-public:
-    MqttPublish(MqttFixedHeader h):header(h) {
+MqttPublish::MqttPublish(MqttFixedHeader h):header(h) {
 
-    }
+}
 
-    MqttPublish(string topic, std::vector<ubyte> payload, ushort msgId = 0):
-        MqttPublish(false, 0, false, topic, payload, msgId) {
-    }
+MqttPublish::MqttPublish(string topic, std::vector<ubyte> payload, ushort msgId):
+    MqttPublish(false, 0, false, topic, payload, msgId) {
+}
 
-    MqttPublish(bool dup, ubyte qos, bool retain, string t, std::vector<ubyte> p, ushort mid = 0) {
-        const auto topicLen = t.length() + 2; //2 for length
-        auto remaining = qos ? topicLen + 2 /*msgId*/ : topicLen;
-        remaining += p.size();
+MqttPublish::MqttPublish(bool dup, ubyte qos, bool retain, string t, std::vector<ubyte> p, ushort mid) {
+    const auto topicLen = t.length() + 2; //2 for length
+    auto remaining = qos ? topicLen + 2 /*msgId*/ : topicLen;
+    remaining += p.size();
 
-        header = MqttFixedHeader(MqttType::PUBLISH, dup, qos, retain, remaining);
-        topic = t;
-        payload = std::move(p);
-        msgId = mid;
-    }
+    header = MqttFixedHeader(MqttType::PUBLISH, dup, qos, retain, remaining);
+    topic = t;
+    payload = std::move(p);
+    msgId = mid;
+}
 
-    void cerealise(Cereal& cereal) {
-        cereal.grain(header);
-        cereal.grain(topic);
+void MqttPublish::cerealise(Cereal& cereal) {
+    cereal.grain(header);
+    cereal.grain(topic);
 
-        auto payloadLen = header.remaining - (topic.length() + MqttFixedHeader::SIZE);
-        if(header.qos) {
-            if(header.remaining < 7 && cereal.getType() == Cereal::Type::Read) {
-                cerr << "Error: PUBLISH message with QOS but no message ID" << endl;
-            } else {
-                cereal.grain(msgId);
-                payloadLen -= 2;
-            }
+    auto payloadLen = header.remaining - (topic.length() + MqttFixedHeader::SIZE);
+    if(header.qos) {
+        if(header.remaining < 7 && cereal.getType() == Cereal::Type::Read) {
+            cerr << "Error: PUBLISH message with QOS but no message ID" << endl;
+        } else {
+            cereal.grain(msgId);
+            payloadLen -= 2;
         }
-        if(cereal.getType() == Cereal::Type::Read) payload.resize(payloadLen);
-        for(auto& b: payload) cereal.grain(b);
     }
+    if(cereal.getType() == Cereal::Type::Read) payload.resize(payloadLen);
+    for(auto& b: payload) cereal.grain(b);
+}
 
-    void handle(MqttServer& server, MqttConnection& connection) const override {
-        (void)connection;
-        server.publish(topic, payload);
-    }
-
-    MqttFixedHeader header;
-    string topic;
-    std::vector<ubyte> payload;
-    ushort msgId;
-};
+void MqttPublish::handle(MqttServer& server, MqttConnection& connection) const {
+    (void)connection;
+    server.publish(topic, payload);
+}
 
 
 MqttSubscribe::MqttSubscribe(MqttFixedHeader h):header(h) {
@@ -290,12 +282,14 @@ public:
     ushort msgId;
 };
 
-// class MqttDisconnect: MqttMessage {
-//     override void handle(MqttServer server, MqttConnection connection) const {
-//         server.unsubscribe(connection);
-//         connection.disconnect();
-//     }
-// }
+
+class MqttDisconnect: public MqttMessage {
+public:
+    void handle(MqttServer& server, MqttConnection& connection) const override {
+        server.unsubscribe(connection);
+        connection.disconnect();
+    }
+};
 
 // class MqttPingReq: MqttMessage {
 //     override void handle(MqttServer server, MqttConnection connection) const {
