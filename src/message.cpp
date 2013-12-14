@@ -62,85 +62,51 @@ void MqttFixedHeader::setRemainingSize(Cereal& cereal) const {
     for(auto b: digits) cereal.grain(b);
 }
 
-
-class MqttConnect: public MqttMessage {
- public:
-
-    MqttConnect(MqttFixedHeader h):header(h) { }
-
-    void cerealise(Cereal& cereal) {
-        cereal.grain(header);
-        cereal.grain(protoName);
-        cereal.grain(protoVersion);
-
-        cereal.grainBits(hasUserName, 1);
-        cereal.grainBits(hasPassword, 1);
-        cereal.grainBits(hasWillRetain, 1);
-        cereal.grainBits(willQos, 2);
-        cereal.grainBits(hasWill, 1);
-        cereal.grainBits(hasClear, 1);
-        cereal.grainBits(reserved, 1);
-
-        cereal.grain(keepAlive);
-        cereal.grain(clientId);
-
-        if(hasWill) cereal.grain(willTopic);
-        if(hasWill) cereal.grain(willMessage);
-        if(hasUserName) cereal.grain(userName);
-        if(hasPassword) cereal.grain(password);
-    }
-
-    bool isBadClientId() const { return clientId.length() < 1 || clientId.length() > 23; }
-
-    MqttFixedHeader header;
-    string protoName;
-    ubyte protoVersion;
-    bool hasUserName; //1
-    bool hasPassword; //1
-    bool hasWillRetain; //1
-    ubyte willQos; //2
-    bool hasWill; //1
-    bool hasClear; //1
-    bool reserved; //1
-    ushort keepAlive;
-    string clientId;
-    string willTopic;
-    string willMessage;
-    string userName;
-    string password;
-};
+void MqttMessage::handle(MqttServer& server, MqttConnection& connection) const {
+    (void)server;
+    (void)connection;
+}
 
 
-class MqttConnack: public MqttMessage {
-public:
-    enum class Code {
-        ACCEPTED = 0,
-        BAD_VERSION = 1,
-        BAD_ID = 2,
-        SERVER_UNAVAILABLE = 3,
-        BAD_USER_OR_PWD = 4,
-        NO_AUTH = 5,
-    };
+MqttConnect::MqttConnect(MqttFixedHeader h):header(h) { }
 
-    MqttConnack():
-        header(MqttType::CONNACK, false, 0, false, 2) {
-    }
+void MqttConnect::cerealise(Cereal& cereal) {
+    cereal.grain(header);
+    cereal.grain(protoName);
+    cereal.grain(protoVersion);
 
-    MqttConnack(Code c):
-        MqttConnack() {
-        code = c;
-    }
+    cereal.grainBits(hasUserName, 1);
+    cereal.grainBits(hasPassword, 1);
+    cereal.grainBits(hasWillRetain, 1);
+    cereal.grainBits(willQos, 2);
+    cereal.grainBits(hasWill, 1);
+    cereal.grainBits(hasClear, 1);
+    cereal.grainBits(reserved, 1);
 
-    void cerealise(Cereal& cereal) {
-        cereal.grain(header);
-        cereal.grain(reserved);
-        cereal.grainBits(code, 8);
-    }
+    cereal.grain(keepAlive);
+    cereal.grain(clientId);
 
-    MqttFixedHeader header;
-    ubyte reserved;
-    Code code;
-};
+    if(hasWill) cereal.grain(willTopic);
+    if(hasWill) cereal.grain(willMessage);
+    if(hasUserName) cereal.grain(userName);
+    if(hasPassword) cereal.grain(password);
+}
+
+
+MqttConnack::MqttConnack():
+    header(MqttType::CONNACK, false, 0, false, 2) {
+}
+
+MqttConnack::MqttConnack(Code c):
+    MqttConnack() {
+    code = c;
+}
+
+void MqttConnack::cerealise(Cereal& cereal) {
+    cereal.grain(header);
+    cereal.grain(reserved);
+    cereal.grainBits(code, 8);
+}
 
 
 MqttPublish::MqttPublish(MqttFixedHeader h):header(h) {
@@ -209,98 +175,69 @@ void MqttSubscribe::cerealise(Cereal& cereal) {
 }
 
 
-class MqttSuback: public MqttMessage {
-public:
+MqttSuback::MqttSuback(MqttFixedHeader h):header(h) {
 
-    MqttSuback(MqttFixedHeader h):header(h) {
+}
 
-    }
+MqttSuback::MqttSuback(ushort m, std::vector<ubyte> q):
+    header(MqttType::SUBACK, false, 0, false, qos.size() + 2),
+    msgId(m),
+    qos(std::move(q)) {
+}
 
-    MqttSuback(ushort m, std::vector<ubyte> q):
-        header(MqttType::SUBACK, false, 0, false, qos.size() + 2),
-        msgId(m),
-        qos(std::move(q)) {
-    }
-
-    void cerealise(Cereal& cereal) {
-        cereal.grain(header);
-        cereal.grain(msgId);
-        ushort size;
-        cereal.grain(size);
-        if(qos.size() != size) qos.resize(size);
-        for(auto& q: qos) cereal.grain(q);
-    }
-
-    MqttFixedHeader header;
-    ushort msgId;
-    std::vector<ubyte> qos;
-};
-
-class MqttUnsubscribe: public MqttMessage {
-public:
-    MqttUnsubscribe(MqttFixedHeader h):header(h) {
-
-    }
-
-    void handle(MqttServer& server, MqttConnection& connection) const override {
-        server.unsubscribe(connection, msgId, topics);
-    }
-
-    void cerealise(Cereal& cereal) {
-        cereal.grain(header);
-        cereal.grain(msgId);
-        ushort size;
-        cereal.grain(size);
-        if(topics.size() != size) topics.resize(size);
-        for(auto& t: topics) cereal.grain(t);
-    }
-
-    MqttFixedHeader header;
-    ushort msgId;
-    std::vector<string> topics;
-};
+void MqttSuback::cerealise(Cereal& cereal) {
+    cereal.grain(header);
+    cereal.grain(msgId);
+    ushort size;
+    cereal.grain(size);
+    if(qos.size() != size) qos.resize(size);
+    for(auto& q: qos) cereal.grain(q);
+}
 
 
-class MqttUnsuback: public MqttMessage {
-public:
+MqttUnsubscribe::MqttUnsubscribe(MqttFixedHeader h):header(h) {
 
-    MqttUnsuback(ushort m):
-        header(MqttType::UNSUBACK, false, 0, false, 2),
-        msgId(m) {
-    }
+}
 
-    MqttUnsuback(MqttFixedHeader h):header(h), msgId() {
+void MqttUnsubscribe::handle(MqttServer& server, MqttConnection& connection) const {
+    server.unsubscribe(connection, msgId, topics);
+}
 
-    }
-
-    void cerealise(Cereal& cereal) {
-        cereal.grain(header);
-        cereal.grain(msgId);
-    }
-
-    MqttFixedHeader header;
-    ushort msgId;
-};
+void MqttUnsubscribe::cerealise(Cereal& cereal) {
+    cereal.grain(header);
+    cereal.grain(msgId);
+    ushort size;
+    cereal.grain(size);
+    if(topics.size() != size) topics.resize(size);
+    for(auto& t: topics) cereal.grain(t);
+}
 
 
-class MqttDisconnect: public MqttMessage {
-public:
-    void handle(MqttServer& server, MqttConnection& connection) const override {
-        server.unsubscribe(connection);
-        connection.disconnect();
-    }
-};
+MqttUnsuback::MqttUnsuback(ushort m):
+    header(MqttType::UNSUBACK, false, 0, false, 2),
+    msgId(m)
+{
+}
 
-class MqttPingReq: public MqttMessage {
-public:
-    void handle(MqttServer& server, MqttConnection& connection) const override {
-        server.ping(connection);
-    }
-};
+MqttUnsuback::MqttUnsuback(MqttFixedHeader h):header(h), msgId() {
 
-class MqttPingResp: public MqttMessage {
-public:
-    std::vector<ubyte> encode() const {
-        return std::vector<ubyte>{0xd0, 0x00};
-    }
-};
+}
+
+void MqttUnsuback::cerealise(Cereal& cereal) {
+    cereal.grain(header);
+    cereal.grain(msgId);
+}
+
+
+void MqttDisconnect::handle(MqttServer& server, MqttConnection& connection) const {
+    server.unsubscribe(connection);
+    connection.disconnect();
+}
+
+void MqttPingReq::handle(MqttServer& server, MqttConnection& connection) const {
+    server.ping(connection);
+}
+
+std::vector<ubyte> MqttPingResp::encode() const {
+    return std::vector<ubyte>{0xd0, 0x00};
+}
