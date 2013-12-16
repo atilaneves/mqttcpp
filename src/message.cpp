@@ -105,7 +105,7 @@ MqttConnack::MqttConnack(Code c):
 void MqttConnack::cerealise(Cereal& cereal) {
     cereal.grain(header);
     cereal.grain(reserved);
-    cereal.grainBits(code, 8);
+    cereal.grain(reinterpret_cast<ubyte&>(code));
 }
 
 
