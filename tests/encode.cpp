@@ -261,8 +261,8 @@ class Suback: public TestCase {
     virtual void test() override {
         checkEqual(encodeMsg(MqttSuback(12, std::vector<ubyte>({1, 2, 0, 2}))),
                    std::vector<ubyte>({0x90, 0x06, //fixed header
-                    0x00, 0x0c, //msgId
-                               0x01, 0x02, 0x00, 0x02})); //qos
+                                       0x00, 0x0c, //msgId
+                                       0x01, 0x02, 0x00, 0x02})); //qos
     }
 };
 REGISTER_TEST(encode, Suback)
@@ -278,13 +278,12 @@ REGISTER_TEST(encode, Suback)
 // REGISTER_TEST(encode, PingReq)
 
 
-// class PingResp: public TestCase {
-//     virtual void test() override {
-//         checkEqual((new MqttPingResp()).encode(),
-//                    [0xd0, 0x00]);
-//     }
-// };
-// REGISTER_TEST(encode, PingResp)
+class PingResp: public TestCase {
+    virtual void test() override {
+        checkEqual(MqttPingResp().encode(), std::vector<ubyte>({0xd0, 0x00}));
+    }
+};
+REGISTER_TEST(encode, PingResp)
 
 
 // class Unsubscribe: public TestCase {
@@ -305,11 +304,11 @@ REGISTER_TEST(encode, Suback)
 // REGISTER_TEST(encode, Unsubscribe)
 
 
-// class Unsuback: public TestCase {
-//     virtual void test() override {
-//         checkEqual((new MqttUnsuback(13)).encodeMsg(),
-//                    [0xb0, 0x02, //fixed header
-//                     0x00, 0x0d ]); //msgId
-//     }
-// };
-// REGISTER_TEST(encode, Unsuback)
+class Unsuback: public TestCase {
+    virtual void test() override {
+        checkEqual(encodeMsg(MqttUnsuback(13)),
+                   std::vector<ubyte>({0xb0, 0x02, //fixed header
+                                       0x00, 0x0d})); //msgId
+    }
+};
+REGISTER_TEST(encode, Unsuback)
