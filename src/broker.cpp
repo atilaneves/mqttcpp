@@ -4,6 +4,22 @@
 #include <boost/algorithm/string.hpp>
 #include <unordered_map>
 
+
+namespace {
+
+bool revStrEquals(const std::string& str1, const std::string& str2) { //compare strings in reverse
+    if(str1.length() != str2.length()) return false;
+    for(int i = str1.length() - 1; i >= 0; --i)
+        if(str1[i] != str2[i]) return false;
+    return true;
+}
+
+bool equalOrPlus(const std::string& pat, const std::string& top) {
+    return pat == "+" || revStrEquals(pat, top);
+}
+} //anonymous namespace
+
+
 class Subscription {
 public:
 
@@ -43,36 +59,23 @@ private:
 
 struct SubscriptionTree {
 public:
-//     void addSubscription(Subscription s, in string[] parts) {
-//         assert(parts.length);
-//         if(_useCache) _cache = _cache.init; //invalidate cache
-//         addSubscriptionImpl(s, parts, null, _nodes);
-//     }
+    // void addSubscription(Subscription* s, std::vector<std::string> parts) {
+    //     assert(parts.size());
+    //     if(_useCache) _cache.clear(); //invalidate cache
+    //     addSubscriptionImpl(s, parts, null, _nodes);
+    // }
 
-//     void addSubscriptionImpl(Subscription s, const(string)[] parts,
-//                              Node* parent, ref Node*[string] nodes) {
-//         auto part = parts[0];
-//         parts = parts[1 .. $];
-//         auto node = addOrFindNode(s, part, parent, nodes);
-//         if(parts.empty) {
-//             node.leaves ~= s;
-//         } else {
-//             addSubscriptionImpl(s, parts, node, node.branches);
-//         }
-//     }
-
-//     Node* addOrFindNode(Subscription subscription, in string part,
-//                         Node* parent, ref Node*[string] nodes) {
-//         if(part in nodes) {
-//             auto n = nodes[part];
-//             if(part == n.part) {
-//                 return n;
-//             }
-//         }
-//         auto node = new Node(part, parent);
-//         nodes[part] = node;
-//         return node;
-//     }
+    // void addSubscriptionImpl(Subscription s, const(string)[] parts,
+    //                          Node* parent, ref Node*[string] nodes) {
+    //     auto part = parts[0];
+    //     parts = parts[1 .. $];
+    //     auto node = addOrFindNode(part, parent, nodes);
+    //     if(parts.empty) {
+    //         node.leaves ~= s;
+    //     } else {
+    //         addSubscriptionImpl(s, parts, node, node.branches);
+    //     }
+    // }
 
 //     void removeSubscription(MqttSubscriber subscriber, ref Node*[string] nodes) {
 //         if(_useCache) _cache = _cache.init; //invalidate cache
@@ -164,6 +167,7 @@ public:
 
 private:
     struct Node {
+        Node(std::string pt, Node* pr):part(pt), parent(pr) {}
         std::string part;
         Node* parent;
         std::unordered_map<std::string, Node*> branches;
@@ -173,6 +177,16 @@ private:
     bool _useCache;
     std::unordered_map<std::string, Subscription*> _cache;
     std::unordered_map<std::string, Node*> _nodes;
+
+    Node* addOrFindNode(std::string part, Node* parent,
+                        std::unordered_map<std::string, Node*> nodes) {
+        if(nodes.count(part) && part == nodes[part]->part) {
+            return nodes[part];
+        }
+        auto node = new Node(part, parent);
+        nodes[part] = node;
+        return node;
+    }
 };
 
 
@@ -220,18 +234,3 @@ private:
     //     _subscriptions.publish(topic, topParts, payload);
     // }
 };
-
-
-namespace {
-
-bool revStrEquals(const std::string& str1, const std::string& str2) { //compare strings in reverse
-    if(str1.length() != str2.length()) return false;
-    for(int i = str1.length() - 1; i >= 0; --i)
-        if(str1[i] != str2[i]) return false;
-    return true;
-}
-
-bool equalOrPlus(const std::string& pat, const std::string& top) {
-    return pat == "+" || revStrEquals(pat, top);
-}
-}
