@@ -93,20 +93,24 @@ public:
         }
     }
 
-//     void removeSubscription(MqttSubscriber subscriber, in string[] topic, ref Node*[string] nodes) {
-//         clearCache();
-//         auto newnodes = nodes.dup;
-//         foreach(n; newnodes) {
-//             if(n.leaves) {
-//                 n.leaves = std.algorithm.remove!(l => l.isSubscription(subscriber, topic))(n.leaves);
-//                 if(n.leaves.empty && !n.branches.length) {
-//                     removeNode(n.parent, n);
-//                 }
-//             } else {
-//                 removeSubscription(subscriber, topic, n.branches);
-//             }
-//         }
-//     }
+    void removeSubscription(MqttSubscriber& subscriber,
+                            std::vector<std::string> topic,
+                            std::unordered_map<std::string, Node*>& nodes) {
+        clearCache();
+        std::unordered_map<std::string, Node*> newNodes = nodes;
+        for(auto n: newNodes) {
+            if(n.second->leaves.size()) {
+                std::remove_if(n.second->leaves.begin(), n.second->leaves.end(),
+                               [&subscriber, &topic](Subscription* l) {
+                                   return l->isSubscription(subscriber, topic); });
+                if(!n.second->leaves.size() && !n.second->branches.size()) {
+                    removeNode(n.second->parent, n.second);
+                }
+            } else {
+                removeSubscription(subscriber, topic, n.second->branches);
+            }
+        }
+    }
 
 
 //     void publish(in string topic, string[] topParts, in const(ubyte)[] payload) {
