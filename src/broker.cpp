@@ -23,6 +23,8 @@ bool equalOrPlus(const std::string& pat, const std::string& top) {
 class Subscription {
 public:
 
+    friend class SubscriptionTree;
+
     Subscription(MqttSubscriber& subscriber, MqttSubscribe::Topic topic,
                  std::deque<std::string> topicParts):
         _subscriber(subscriber),
@@ -113,58 +115,61 @@ public:
     }
 
 
-//     void publish(in string topic, string[] topParts, in const(ubyte)[] payload) {
-//         publish(topic, topParts, payload, _nodes);
-//     }
+    void publish(std::string topic, std::deque<std::string> topParts,
+                 std::vector<ubyte> payload) {
+        publish(topic, topParts, payload, _nodes);
+    }
 
-//     void publish(in string topic, string[] topParts, in const(ubyte)[] payload,
-//                  Node*[string] nodes) {
-//         //check the cache first
-//         if(_useCache && topic in _cache) {
-//             foreach(s; _cache[topic]) s.newMessage(topic, payload);
-//             return;
-//         }
+    void publish(std::string topic, std::deque<std::string> topParts,
+                 std::vector<ubyte> payload,
+                 std::unordered_map<std::string, Node*> nodes) {
+        //check the cache first
+        if(_useCache && _cache.count(topic)) {
+            for(auto s: _cache[topic]) s->newMessage(topic, payload);
+            return;
+        }
 
-//         //not in the cache or not using the cache, do it the hard way
-//         foreach(part; [topParts[0], "#", "+"]) {
-//             if(part in nodes) {
-//                 if(topParts.length == 1 && "#" in nodes[part].branches) {
-//                     //So that "finance/#" matches finance
-//                     publishLeaves(topic, payload, topParts, nodes[part].branches["#"].leaves);
-//                 }
-//                 publishLeaves(topic, payload, topParts, nodes[part].leaves);
-//                 if(topParts.length > 1) {
-//                     publish(topic, topParts[1..$], payload, nodes[part].branches);
-//                 }
-//             }
-//         }
-//     }
+        //not in the cache or not using the cache, do it the hard way
+        for(auto part: std::vector<std::string>{topParts[0], "#", "+"}) {
+            if(nodes.count(part)) {
+                if(topParts.size() == 1 && nodes[part]->branches.count("#")) {
+                    //So that "finance/#" matches finance
+                    publishLeaves(topic, payload, topParts, nodes[part]->branches["#"]->leaves);
+                }
+                publishLeaves(topic, payload, topParts, nodes[part]->leaves);
+                if(topParts.size() > 1) {
+                    topParts.pop_front();
+                    publish(topic, topParts, payload, nodes[part]->branches);
+                }
+            }
+        }
+    }
 
-//     void publishLeaves(in string topic, in const(ubyte)[] payload,
-//                        in string[] topParts,
-//                        Subscription[] subscriptions) {
-//         foreach(sub; subscriptions) {
-//             if(topParts.length == 1 &&
-//                equalOrPlus(sub._part, topParts[0])) {
-//                 publishLeaf(sub, topic, payload);
-//             }
-//             else if(sub._part == "#") {
-//                 publishLeaf(sub, topic, payload);
-//             }
-//         }
-//     }
+    void publishLeaves(std::string topic, std::vector<ubyte> payload,
+                       std::deque<std::string> topParts,
+                       std::vector<Subscription*> subscriptions) {
+        for(auto sub: subscriptions) {
+            if(topParts.size() == 1 &&
+               equalOrPlus(sub->_part, topParts[0])) {
+                publishLeaf(sub, topic, payload);
+            }
+            else if(sub->_part == "#") {
+                publishLeaf(sub, topic, payload);
+            }
+        }
+    }
 
-//     void publishLeaf(Subscription sub, in string topic, in const(ubyte)[] payload) {
-//         sub.newMessage(topic, payload);
-//         if(_useCache) _cache[topic] ~= sub;
-//     }
+    void publishLeaf(Subscription* sub, std::string topic, std::vector<ubyte> payload) {
+        sub->newMessage(topic, payload);
+        if(_useCache) _cache[topic].push_back(sub);
+    }
 
     void useCache(bool u) { _useCache = u; }
 
 private:
 
     bool _useCache;
-    std::unordered_map<std::string, Subscription*> _cache;
+    std::unordered_map<std::string, std::vector<Subscription*>> _cache;
     std::unordered_map<std::string, Node*> _nodes;
     friend class MqttBroker;
 
@@ -236,10 +241,11 @@ public:
         _subscriptions.removeSubscription(subscriber, topics, _subscriptions._nodes);
     }
 
-    // void publish(std::string topic, std::vector<ubyte> payload) {
-    //     auto topParts = array(splitter(topic, "/"));
-    //     publish(topic, topParts, payload);
-    // }
+    void publish(std::string topic, std::vector<ubyte> payload) {
+        std::deque<std::string> topParts;
+        boost::split(topParts, topic, boost::is_any_of("/"));
+        publish(topic, topParts, payload);
+    }
 
     void useCache(bool u) { _subscriptions.useCache(u); }
 
@@ -247,8 +253,8 @@ private:
 
     SubscriptionTree _subscriptions;
 
-    // void publish(std::string topic, std::vector<std::string> topParts,
-    //              std::vector<ubyte> payload) {
-    //     _subscriptions.publish(topic, topParts, payload);
-    // }
+    void publish(std::string topic, std::deque<std::string> topParts,
+                 std::vector<ubyte> payload) {
+        _subscriptions.publish(topic, topParts, payload);
+    }
 };
