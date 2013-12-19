@@ -94,11 +94,13 @@ void MqttConnect::cerealise(Cereal& cereal) {
 
 
 MqttConnack::MqttConnack():
-    header(MqttType::CONNACK, false, 0, false, 2) {
+    header(MqttType::CONNACK, false, 0, false, 2),
+    code(Code::ACCEPTED) {
 }
 
 MqttConnack::MqttConnack(Code c):
     MqttConnack() {
+
     code = c;
 }
 
