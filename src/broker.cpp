@@ -58,6 +58,16 @@ private:
 
 
 struct SubscriptionTree {
+private:
+    struct Node {
+        Node(std::string pt, Node* pr):part(pt), parent(pr) {}
+        std::string part;
+        Node* parent;
+        std::unordered_map<std::string, Node*> branches;
+        std::vector<Subscription*> leaves;
+    };
+
+
 public:
 
     void addSubscription(Subscription* s, std::deque<std::string> parts) {
@@ -66,23 +76,22 @@ public:
         addSubscriptionImpl(s, parts, nullptr, _nodes);
     }
 
-    // void removeSubscription(MqttSubscriber& subscriber,
-    //                         std::unordered_map<std::string, Node*>& nodes) {
-    //     clearCache();
-    //     decltype(nodes) newNodes;
-    //     std::copy(nodes.cbegin(), nodes.cend(), std::back_inserter(newNodes));
-    //     for(auto n: newnodes) {
-    //         if(n->leaves) {
-    //             std::remove_if(n->leaves.begin(), n->leaves.end(),
-    //                            [](Subscription* l) { return l.isSubscriber(subscriber); });
-    //             if(!n->leaves.size() && !n->branches.size()) {
-    //                 removeNode(n->parent, n);
-    //             }
-    //         } else {
-    //             removeSubscription(subscriber, n.branches);
-    //         }
-    //     }
-    // }
+    void removeSubscription(MqttSubscriber& subscriber,
+                            std::unordered_map<std::string, Node*>& nodes) {
+        clearCache();
+        std::unordered_map<std::string, Node*> newNodes = nodes;
+        for(auto n: newNodes) {
+            if(n.second->leaves.size()) {
+                std::remove_if(n.second->leaves.begin(), n.second->leaves.end(),
+                               [&subscriber](Subscription* l) { return l->isSubscriber(subscriber); });
+                if(!n.second->leaves.size() && !n.second->branches.size()) {
+                    removeNode(n.second->parent, n.second);
+                }
+            } else {
+                removeSubscription(subscriber, n.second->branches);
+            }
+        }
+    }
 
 //     void removeSubscription(MqttSubscriber subscriber, in string[] topic, ref Node*[string] nodes) {
 //         clearCache();
@@ -149,13 +158,6 @@ public:
     void useCache(bool u) { _useCache = u; }
 
 private:
-    struct Node {
-        Node(std::string pt, Node* pr):part(pt), parent(pr) {}
-        std::string part;
-        Node* parent;
-        std::unordered_map<std::string, Node*> branches;
-        std::vector<Subscription*> leaves;
-    };
 
     bool _useCache;
     std::unordered_map<std::string, Subscription*> _cache;
