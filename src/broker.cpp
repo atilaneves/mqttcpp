@@ -47,18 +47,20 @@
 //     }
 // };
 
-// private bool revStrEquals(in string str1, in string str2) pure nothrow { //compare strings in reverse
-//     if(str1.length != str2.length) return false;
-//     for(auto i = cast(int)str1.length - 1; i >= 0; --i)
-//         if(str1[i] != str2[i]) return false;
-//     return true;
-// }
-
-// private bool equalOrPlus(in string pat, in string top) pure nothrow {
-//     return pat == "+" || pat.revStrEquals(top);
-// }
 
 namespace {
+
+bool revStrEquals(const std::string& str1, const std::string& str2) { //compare strings in reverse
+    if(str1.length() != str2.length()) return false;
+    for(int i = str1.length() - 1; i >= 0; --i)
+        if(str1[i] != str2[i]) return false;
+    return true;
+}
+
+bool equalOrPlus(const std::string& pat, const std::string& top) {
+    return pat == "+" || revStrEquals(pat, top);
+}
+
 
 // private struct SubscriptionTree {
 //     private static struct Node {
