@@ -21,13 +21,22 @@ public:
 class MqttServer {
 public:
 
-    void publish(std::string topic, std::vector<ubyte> payload);
+    void newConnection(MqttConnection& connection,
+                       MqttConnect* connect);
+    void subscribe(MqttConnection& connection, ushort msgId,
+                   std::vector<std::string> topics);
     void subscribe(MqttConnection& connection, ushort msgId,
                    std::vector<MqttSubscribe::Topic> topics);
+    void unsubscribe(MqttConnection& connection);
     void unsubscribe(MqttConnection& connection, ushort msgId,
                      std::vector<std::string> topics);
-    void unsubscribe(MqttConnection& connection);
+    void publish(std::string topic, std::string payload);
+    void publish(std::string topic, std::vector<ubyte> payload);
     void ping(MqttConnection& connection);
+    void useCache(bool u) { _broker.useCache(u); }
+
+private:
+    MqttBroker _broker;
 };
 
 
