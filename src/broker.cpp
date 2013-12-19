@@ -62,27 +62,30 @@ public:
 
     void addSubscription(Subscription* s, std::deque<std::string> parts) {
         assert(parts.size());
-        if(_useCache) _cache.clear(); //invalidate cache
+        clearCache();
         addSubscriptionImpl(s, parts, nullptr, _nodes);
     }
 
-//     void removeSubscription(MqttSubscriber subscriber, ref Node*[string] nodes) {
-//         if(_useCache) _cache = _cache.init; //invalidate cache
-//         auto newnodes = nodes.dup;
-//         foreach(n; newnodes) {
-//             if(n.leaves) {
-//                 n.leaves = std.algorithm.remove!(l => l.isSubscriber(subscriber))(n.leaves);
-//                 if(n.leaves.empty && !n.branches.length) {
-//                     removeNode(n.parent, n);
-//                 }
-//             } else {
-//                 removeSubscription(subscriber, n.branches);
-//             }
-//         }
-//     }
+    // void removeSubscription(MqttSubscriber& subscriber,
+    //                         std::unordered_map<std::string, Node*>& nodes) {
+    //     clearCache();
+    //     decltype(nodes) newNodes;
+    //     std::copy(nodes.cbegin(), nodes.cend(), std::back_inserter(newNodes));
+    //     for(auto n: newnodes) {
+    //         if(n->leaves) {
+    //             std::remove_if(n->leaves.begin(), n->leaves.end(),
+    //                            [](Subscription* l) { return l.isSubscriber(subscriber); });
+    //             if(!n->leaves.size() && !n->branches.size()) {
+    //                 removeNode(n->parent, n);
+    //             }
+    //         } else {
+    //             removeSubscription(subscriber, n.branches);
+    //         }
+    //     }
+    // }
 
 //     void removeSubscription(MqttSubscriber subscriber, in string[] topic, ref Node*[string] nodes) {
-//         if(_useCache) _cache = _cache.init; //invalidate cache
+//         clearCache();
 //         auto newnodes = nodes.dup;
 //         foreach(n; newnodes) {
 //             if(n.leaves) {
@@ -96,15 +99,6 @@ public:
 //         }
 //     }
 
-//     void removeNode(Node* parent, Node* child) {
-//         if(parent) {
-//             parent.branches.remove(child.part);
-//         } else {
-//             _nodes.remove(child.part);
-//         }
-//         if(parent && !parent.branches.length && parent.leaves.empty)
-//             removeNode(parent.parent, parent);
-//     }
 
 //     void publish(in string topic, string[] topParts, in const(ubyte)[] payload) {
 //         publish(topic, topParts, payload, _nodes);
@@ -190,6 +184,20 @@ private:
         auto node = new Node(part, parent);
         nodes[part] = node;
         return node;
+    }
+
+    void clearCache() {
+        if(_useCache) _cache.clear();
+    }
+
+    void removeNode(Node* parent, Node* child) {
+        if(parent) {
+            parent->branches.erase(child->part);
+        } else {
+            _nodes.erase(child->part);
+        }
+        if(parent && !parent->branches.size() && !parent->leaves.size())
+            removeNode(parent->parent, parent);
     }
 };
 
