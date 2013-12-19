@@ -24,9 +24,9 @@ class Subscription {
 public:
 
     Subscription(MqttSubscriber& subscriber, MqttSubscribe::Topic topic,
-                 std::vector<std::string> topicParts):
+                 std::deque<std::string> topicParts):
         _subscriber(subscriber),
-        _part(std::move(topicParts[topicParts.size() - 1])),
+        _part(std::move(topicParts.back())),
         _topic(std::move(topic.topic)),
         _qos(topic.qos) {
     }
@@ -59,12 +59,12 @@ private:
 
 struct SubscriptionTree {
 public:
-    // void addSubscription(Subscription* s, std::vector<std::string> parts) {
-    //     assert(parts.size());
-    //     if(_useCache) _cache.clear(); //invalidate cache
-    //     addSubscriptionImpl(s, parts, null, _nodes);
-    // }
 
+    void addSubscription(Subscription* s, std::deque<std::string> parts) {
+        assert(parts.size());
+        if(_useCache) _cache.clear(); //invalidate cache
+        addSubscriptionImpl(s, parts, nullptr, _nodes);
+    }
 
 //     void removeSubscription(MqttSubscriber subscriber, ref Node*[string] nodes) {
 //         if(_useCache) _cache = _cache.init; //invalidate cache
@@ -206,11 +206,10 @@ public:
     }
 
     void subscribe(MqttSubscriber& subscriber, std::vector<MqttSubscribe::Topic> topics) {
-        (void)subscriber;
         for(const auto& t: topics) {
-            std::vector<std::string> parts;
+            std::deque<std::string> parts;
             boost::split(parts, t.topic, boost::is_any_of("/"));
-            //_subscriptions.addSubscription(Subscription(subscriber, t, parts), parts);
+            _subscriptions.addSubscription(new Subscription(subscriber, t, parts), parts);
         }
     }
 
