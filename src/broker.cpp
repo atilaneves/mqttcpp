@@ -65,17 +65,6 @@ public:
     //     addSubscriptionImpl(s, parts, null, _nodes);
     // }
 
-    // void addSubscriptionImpl(Subscription s, const(string)[] parts,
-    //                          Node* parent, ref Node*[string] nodes) {
-    //     auto part = parts[0];
-    //     parts = parts[1 .. $];
-    //     auto node = addOrFindNode(part, parent, nodes);
-    //     if(parts.empty) {
-    //         node.leaves ~= s;
-    //     } else {
-    //         addSubscriptionImpl(s, parts, node, node.branches);
-    //     }
-    // }
 
 //     void removeSubscription(MqttSubscriber subscriber, ref Node*[string] nodes) {
 //         if(_useCache) _cache = _cache.init; //invalidate cache
@@ -171,12 +160,27 @@ private:
         std::string part;
         Node* parent;
         std::unordered_map<std::string, Node*> branches;
-        std::vector<Subscription> leaves;
+        std::vector<Subscription*> leaves;
     };
 
     bool _useCache;
     std::unordered_map<std::string, Subscription*> _cache;
     std::unordered_map<std::string, Node*> _nodes;
+
+    void addSubscriptionImpl(Subscription* s,
+                             std::deque<std::string> parts,
+                             Node* parent,
+                             std::unordered_map<std::string, Node*> nodes) {
+        auto part = parts.front();
+        parts.pop_front();
+        auto node = addOrFindNode(part, parent, nodes);
+        if(!parts.size()) {
+            node->leaves.emplace_back(s);
+        } else {
+            addSubscriptionImpl(s, parts, node, node->branches);
+        }
+    }
+
 
     Node* addOrFindNode(std::string part, Node* parent,
                         std::unordered_map<std::string, Node*> nodes) {
