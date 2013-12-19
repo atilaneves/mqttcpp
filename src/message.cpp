@@ -168,19 +168,15 @@ void MqttSubscribe::Topic::cerealise(Cereal& cereal) {
 void MqttSubscribe::cerealise(Cereal& cereal) {
     cereal.grain(header);
     cereal.grain(msgId);
-    ushort size;
-    cereal.grain(size);
-    if(topics.size() != size) topics.resize(size);
-    for(auto& t: topics) cereal.grain(t);
+    cereal.grainRawArray(topics);
 }
-
 
 MqttSuback::MqttSuback(MqttFixedHeader h):header(h) {
 
 }
 
 MqttSuback::MqttSuback(ushort m, std::vector<ubyte> q):
-    header(MqttType::SUBACK, false, 0, false, qos.size() + 2),
+    header(MqttType::SUBACK, false, 0, false, q.size() + 2),
     msgId(m),
     qos(std::move(q)) {
 }
@@ -188,10 +184,7 @@ MqttSuback::MqttSuback(ushort m, std::vector<ubyte> q):
 void MqttSuback::cerealise(Cereal& cereal) {
     cereal.grain(header);
     cereal.grain(msgId);
-    ushort size;
-    cereal.grain(size);
-    if(qos.size() != size) qos.resize(size);
-    for(auto& q: qos) cereal.grain(q);
+    cereal.grainRawArray(qos);
 }
 
 
@@ -206,10 +199,7 @@ void MqttUnsubscribe::handle(MqttServer& server, MqttConnection& connection) con
 void MqttUnsubscribe::cerealise(Cereal& cereal) {
     cereal.grain(header);
     cereal.grain(msgId);
-    ushort size;
-    cereal.grain(size);
-    if(topics.size() != size) topics.resize(size);
-    for(auto& t: topics) cereal.grain(t);
+    cereal.grainRawArray(topics);
 }
 
 
