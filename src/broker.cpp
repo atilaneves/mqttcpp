@@ -166,6 +166,7 @@ private:
     bool _useCache;
     std::unordered_map<std::string, Subscription*> _cache;
     std::unordered_map<std::string, Node*> _nodes;
+    friend class MqttBroker;
 
     void addSubscriptionImpl(Subscription* s,
                              std::deque<std::string> parts,
@@ -227,13 +228,13 @@ public:
         }
     }
 
-    // void unsubscribe(MqttSubscriber& subscriber) {
-    //     _subscriptions.removeSubscription(subscriber, _subscriptions._nodes);
-    // }
+    void unsubscribe(MqttSubscriber& subscriber) {
+        _subscriptions.removeSubscription(subscriber, _subscriptions._nodes);
+    }
 
-    // void unsubscribe(MqttSubscriber& subscriber, std::vector<std::string> topics) {
-    //     _subscriptions.removeSubscription(subscriber, topics, _subscriptions._nodes);
-    // }
+    void unsubscribe(MqttSubscriber& subscriber, std::vector<std::string> topics) {
+        _subscriptions.removeSubscription(subscriber, topics, _subscriptions._nodes);
+    }
 
     // void publish(std::string topic, std::vector<ubyte> payload) {
     //     auto topParts = array(splitter(topic, "/"));
