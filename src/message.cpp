@@ -109,15 +109,18 @@ void MqttConnack::cerealise(Cereal& cereal) {
 }
 
 
-MqttPublish::MqttPublish(MqttFixedHeader h):header(h) {
+MqttPublish::MqttPublish(MqttFixedHeader h):
+    header(h), topic(), payload(), msgId() {
 
 }
 
-MqttPublish::MqttPublish(string topic, std::vector<ubyte> payload, ushort msgId):
-    MqttPublish(false, 0, false, topic, payload, msgId) {
+MqttPublish::MqttPublish(string t, std::vector<ubyte> p, ushort mid):
+    MqttPublish(false, 0, false, t, p, mid) {
 }
 
-MqttPublish::MqttPublish(bool dup, ubyte qos, bool retain, string t, std::vector<ubyte> p, ushort mid) {
+MqttPublish::MqttPublish(bool dup, ubyte qos, bool retain, string t,
+                         std::vector<ubyte> p, ushort mid):
+    topic(), payload(), msgId() {
     const auto topicLen = t.length() + 2; //2 for length
     auto remaining = qos ? topicLen + 2 /*msgId*/ : topicLen;
     remaining += p.size();
@@ -151,7 +154,8 @@ void MqttPublish::handle(MqttServer& server, MqttConnection& connection) const {
 }
 
 
-MqttSubscribe::MqttSubscribe(MqttFixedHeader h):header(h) {
+MqttSubscribe::MqttSubscribe(MqttFixedHeader h):
+    header(h), msgId(), topics() {
 
 }
 

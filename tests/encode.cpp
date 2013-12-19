@@ -1,6 +1,8 @@
 #include "unit_thread.hpp"
 #include <cereal_all>
 #include "message.hpp"
+#include "factory.hpp"
+#include <string>
 
 struct CerealiseFixedHeader: public TestCase {
     virtual void test() override {
@@ -106,42 +108,42 @@ class DecodeBigRemaining: public TestCase {
 };
 REGISTER_TEST(encode, DecodeBigRemaining)
 
-// class ConnectMsg: public TestCase {
-//     virtual void test() override {
-//         std::vector<ubyte> bytes{0x10, 0x2a, //fixed header
-//                           0x00, 0x06, 'M', 'Q', 'I', 's', 'd', 'p', //protocol name
-//                           0x03, //protocol version
-//                           0xcc, //connection flags 1100111x username, pw, !wr, w(01), w, !c, x
-//                           0x00, 0x0a, //keepalive of 10
-//                           0x00, 0x03, 'c', 'i', 'd', //client ID
-//                           0x00, 0x04, 'w', 'i', 'l', 'l', //will topic
-//                           0x00, 0x04, 'w', 'm', 's', 'g', //will msg
-//                           0x00, 0x07, 'g', 'l', 'i', 'f', 't', 'e', 'l', //username
-//                           0x00, 0x02, 'p', 'w', //password
-//                 };
-//         const auto msg = MqttFactory.create(bytes);
-//         checkNotNull(msg);
+class ConnectMsg: public TestCase {
+    virtual void test() override {
+        std::vector<ubyte> bytes{0x10, 0x2a, //fixed header
+                          0x00, 0x06, 'M', 'Q', 'I', 's', 'd', 'p', //protocol name
+                          0x03, //protocol version
+                          0xcc, //connection flags 1100111x username, pw, !wr, w(01), w, !c, x
+                          0x00, 0x0a, //keepalive of 10
+                          0x00, 0x03, 'c', 'i', 'd', //client ID
+                          0x00, 0x04, 'w', 'i', 'l', 'l', //will topic
+                          0x00, 0x04, 'w', 'm', 's', 'g', //will msg
+                          0x00, 0x07, 'g', 'l', 'i', 'f', 't', 'e', 'l', //username
+                          0x00, 0x02, 'p', 'w', //password
+                };
+        const auto msg = MqttFactory::create(bytes);
+        checkNotNull(msg.get());
 
-//         const auto connect = cast(MqttConnect)msg;
-//         checkNotNull(connect);
+        const auto connect = dynamic_cast<MqttConnect*>(msg.get());
+        checkNotNull(connect);
 
-//         checkEqual(connect.protoName, "MQIsdp");
-//         checkEqual(connect.protoVersion, 3);
-//         checkTrue(connect.hasUserName);
-//         checkTrue(connect.hasPassword);
-//         checkFalse(connect.hasWillRetain);
-//         checkEqual(connect.willQos, 1);
-//         checkTrue(connect.hasWill);
-//         checkFalse(connect.hasClear);
-//         checkEqual(connect.keepAlive, 10);
-//         checkEqual(connect.clientId, "cid");
-//         checkEqual(connect.willTopic, "will");
-//         checkEqual(connect.willMessage, "wmsg");
-//         checkEqual(connect.userName, "gliftel");
-//         checkEqual(connect.password, "pw");
-//     }
-// };
-// REGISTER_TEST(encode, ConnectMsg)
+        checkEqual(connect->protoName, "MQIsdp");
+        checkEqual(connect->protoVersion, 3);
+        checkTrue(connect->hasUserName);
+        checkTrue(connect->hasPassword);
+        checkFalse(connect->hasWillRetain);
+        checkEqual(connect->willQos, 1);
+        checkTrue(connect->hasWill);
+        checkFalse(connect->hasClear);
+        checkEqual(connect->keepAlive, 10);
+        checkEqual(connect->clientId, "cid");
+        checkEqual(connect->willTopic, "will");
+        checkEqual(connect->willMessage, "wmsg");
+        checkEqual(connect->userName, "gliftel");
+        checkEqual(connect->password, "pw");
+    }
+};
+REGISTER_TEST(encode, ConnectMsg)
 
 class ConnackMsg: public TestCase {
     virtual void test() override {
@@ -153,56 +155,55 @@ class ConnackMsg: public TestCase {
 REGISTER_TEST(encode, ConnackMsg)
 
 
-// class DecodePublishWithMsgId: public TestCase {
-//     virtual void test() override {
+class DecodePublishWithMsgId: public TestCase {
+    virtual void test() override {
 
-//         std::vector<ubyte> bytes{0x3c, 0x0b, //fixed header
-//                       0x00, 0x03, 't', 'o', 'p', //topic name
-//                       0x00, 0x21, //message ID
-//                       'b', 'o', 'r', 'g', //payload
-//                 };
+        std::vector<ubyte> bytes{0x3c, 0x0b, //fixed header
+                      0x00, 0x03, 't', 'o', 'p', //topic name
+                      0x00, 0x21, //message ID
+                      'b', 'o', 'r', 'g', //payload
+                };
 
-//     const msg = MqttFactory.create(bytes);
-//     checkNotNull(msg);
+        const auto msg = MqttFactory::create(bytes);
+        checkNotNull(msg.get());
 
-//     const publish = cast(MqttPublish)msg;
-//     checkNotNull(publish);
+        const auto publish = dynamic_cast<MqttPublish*>(msg.get());
+        checkNotNull(publish);
 
-//     checkEqual(publish.topic, "top");
-//     checkEqual(publish.payload, "borg");
-//     checkEqual(publish.msgId, 33);
-//     }
-// };
-// REGISTER_TEST(encode, DecodePublishWithMsgId)
-
-
-// // class DecodePublishWithNoMsgId: public TestCase {
-// //     virtual void test() override {
-// //         ubyte[] bytes = [ 0x30, 0x05, //fixed header
-// //                           0x00, 0x03, 't', 'u', 'p', //topic name
-// //             ];
-// //         const msg = MqttFactory.create(bytes);
-// //         checkNotNull(msg);
-// //         const publish = cast(MqttPublish)msg;
-// //         checkNotNull(publish);
-// //         checkEqual(publish.topic, "tup");
-// //         checkEqual(publish.msgId, 0); //no message id
-// //     }
-// // };
-// // REGISTER_TEST(encode, DecodePublishWithNoMsgId)
+        checkEqual(publish->topic, "top");
+        checkEqual(publish->payload, std::vector<ubyte>({'b', 'o', 'r', 'g'}));
+        checkEqual(publish->msgId, 33);
+    }
+};
+REGISTER_TEST(encode, DecodePublishWithMsgId)
 
 
-// // class DecodePublishWithBadSize: public TestCase {
-// //     virtual void test() override {
-// //         ubyte[] bytes = [ 0x30, 0x60, //fixed header with wrong (too big) size
-// //                           0x00, 0x03, 't', 'u', 'p', //topic name
-// //                           'b', 'o', 'r', 'g', //payload
-// //             ];
-// //         const msg = MqttFactory.create(bytes);
-// //         checkNull(msg);
-// //     }
-// // };
-// // REGISTER_TEST(encode, DecodePublishWithBadSize)
+class DecodePublishWithNoMsgId: public TestCase {
+    virtual void test() override {
+        std::vector<ubyte> bytes{0x30, 0x05, //fixed header
+                          0x00, 0x03, 't', 'u', 'p', //topic name
+            };
+        const auto msg = MqttFactory::create(bytes);
+        checkNotNull(msg.get());
+        const auto publish = dynamic_cast<MqttPublish*>(msg.get());
+        checkNotNull(publish);
+        checkEqual(publish->topic, "tup");
+        checkEqual(publish->msgId, 0); //no message id
+    }
+};
+REGISTER_TEST(encode, DecodePublishWithNoMsgId)
+
+
+class DecodePublishWithBadSize: public TestCase {
+    virtual void test() override {
+        std::vector<ubyte> bytes{0x30, 0x60, //fixed header with wrong (too big) size
+                          0x00, 0x03, 't', 'u', 'p', //topic name
+                          'b', 'o', 'r', 'g', //payload
+                };
+        checkNull(MqttFactory::create(bytes).get());
+    }
+};
+REGISTER_TEST(encode, DecodePublishWithBadSize)
 
 
 template<typename T>
@@ -235,26 +236,32 @@ class EncodePublish: public TestCase {
 };
 REGISTER_TEST(encode, EncodePublish)
 
+namespace unit_thread_output {
+    template<>
+    std::string convert(const MqttSubscribe::Topic& t) {
+        return std::string("MqttSubscribe::Topic(") + t.topic + ", " + std::to_string((int)t.qos) + ")";
+    }
+}
 
-// // class Subscribe: public TestCase {
-// //     virtual void test() override {
-// //         ubyte[] bytes = [ 0x8c, 0x13, //fixed header
-// //                           0x00, 0x21, //message ID
-// //                           0x00, 0x05, 'f', 'i', 'r', 's', 't',
-// //                           0x01, //qos
-// //                           0x00, 0x06, 's', 'e', 'c', 'o', 'n', 'd',
-// //                           0x02, //qos
-// //             ];
-// //         const msg = MqttFactory.create(bytes);
-// //         checkNotNull(msg);
-// //         const subscribe = cast(MqttSubscribe)msg;
-// //         checkNotNull(subscribe);
-// //         checkEqual(subscribe.msgId, 33);
-// //         checkEqual(subscribe.topics,
-// //                    [MqttSubscribe.Topic("first", 1), MqttSubscribe.Topic("second", 2)]);
-// //     }
-// // };
-// // REGISTER_TEST(encode, Subscribe)
+class Subscribe: public TestCase {
+    virtual void test() override {
+        std::vector<ubyte> bytes{0x8c, 0x13, //fixed header
+                          0x00, 0x21, //message ID
+                          0x00, 0x05, 'f', 'i', 'r', 's', 't',
+                          0x01, //qos
+                          0x00, 0x06, 's', 'e', 'c', 'o', 'n', 'd',
+                          0x02, //qos
+                };
+        const auto msg = MqttFactory::create(bytes);
+        checkNotNull(msg.get());
+        const auto subscribe = dynamic_cast<MqttSubscribe*>(msg.get());
+        checkNotNull(subscribe);
+        checkEqual(subscribe->msgId, 33);
+        checkEqual(subscribe->topics, std::vector<MqttSubscribe::Topic>({
+                    MqttSubscribe::Topic("first", 1), MqttSubscribe::Topic("second", 2)}));
+    }
+};
+REGISTER_TEST(encode, Subscribe)
 
 
 class Suback: public TestCase {
@@ -268,14 +275,12 @@ class Suback: public TestCase {
 REGISTER_TEST(encode, Suback)
 
 
-// class PingReq: public TestCase {
-//     virtual void test() override {
-//         ubyte[] bytes = [ 0xc0, 0x00 ];
-//         const pingReq = MqttFactory.create(bytes);
-//         checkNotNull(pingReq);
-//     }
-// };
-// REGISTER_TEST(encode, PingReq)
+class PingReq: public TestCase {
+    virtual void test() override {
+        std::vector<ubyte> bytes{0xc0, 0x00};        checkNotNull(MqttFactory::create(bytes).get());
+    }
+};
+REGISTER_TEST(encode, PingReq)
 
 
 class PingResp: public TestCase {
@@ -286,22 +291,22 @@ class PingResp: public TestCase {
 REGISTER_TEST(encode, PingResp)
 
 
-// class Unsubscribe: public TestCase {
-//     virtual void test() override {
-//         ubyte[] bytes = [ 0xa2, 0x11, //fixed header
-//                           0x00, 0x2a, //message ID
-//                           0x00, 0x05, 'f', 'i', 'r', 's', 't',
-//                           0x00, 0x06, 's', 'e', 'c', 'o', 'n', 'd',
-//             ];
-//         const msg = MqttFactory.create(bytes);
-//         checkNotNull(msg);
-//         const unsubscribe = cast(MqttUnsubscribe)msg;
-//         checkNotNull(unsubscribe);
-//         checkEqual(unsubscribe.msgId, 42);
-//         checkEqual(unsubscribe.topics, ["first", "second"]);
-//     }
-// };
-// REGISTER_TEST(encode, Unsubscribe)
+class Unsubscribe: public TestCase {
+    virtual void test() override {
+        std::vector<ubyte> bytes{0xa2, 0x11, //fixed header
+                          0x00, 0x2a, //message ID
+                          0x00, 0x05, 'f', 'i', 'r', 's', 't',
+                          0x00, 0x06, 's', 'e', 'c', 'o', 'n', 'd',
+                };
+        const auto msg = MqttFactory::create(bytes);
+        checkNotNull(msg.get());
+        const auto unsubscribe = dynamic_cast<MqttUnsubscribe*>(msg.get());
+        checkNotNull(unsubscribe);
+        checkEqual(unsubscribe->msgId, 42);
+        checkEqual(unsubscribe->topics, std::vector<std::string>({"first", "second"}));
+    }
+};
+REGISTER_TEST(encode, Unsubscribe)
 
 
 class Unsuback: public TestCase {

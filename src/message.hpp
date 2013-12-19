@@ -112,6 +112,9 @@ public:
     void handle(MqttServer& server, MqttConnection& connection) const override;
 
     struct Topic {
+        Topic():topic(), qos() {}
+        Topic(std::string t, ubyte q):topic(std::move(t)), qos(q) {}
+        bool operator==(const Topic& t) const { return topic == t.topic && qos == t.qos; }
         std::string topic;
         ubyte qos;
         void cerealise(Cereal& cereal);
@@ -123,6 +126,7 @@ public:
     ushort msgId;
     std::vector<Topic> topics;
 };
+
 
 class MqttSuback: public MqttMessage {
 public:
