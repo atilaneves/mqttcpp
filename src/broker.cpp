@@ -196,6 +196,11 @@ void MqttBroker::unsubscribe(MqttSubscriber& subscriber, std::vector<std::string
     _subscriptions.removeSubscription(subscriber, topics, _subscriptions._nodes);
 }
 
+void MqttBroker::publish(std::string topic, std::string payload) {
+    std::vector<ubyte> realPayload(payload.begin(), payload.end());
+    publish(topic, realPayload);
+}
+
 void MqttBroker::publish(std::string topic, std::vector<ubyte> payload) {
     std::deque<std::string> topParts;
     boost::split(topParts, topic, boost::is_any_of("/"));

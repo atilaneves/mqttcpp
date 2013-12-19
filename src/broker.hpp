@@ -95,6 +95,7 @@ public:
     void subscribe(MqttSubscriber& subscriber, std::vector<MqttSubscribe::Topic> topics);
     void unsubscribe(MqttSubscriber& subscriber);
     void unsubscribe(MqttSubscriber& subscriber, std::vector<std::string> topics);
+    void publish(std::string topic, std::string payload);
     void publish(std::string topic, std::vector<ubyte> payload);
 
     void useCache(bool u) { _subscriptions.useCache(u); }
