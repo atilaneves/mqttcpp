@@ -45,25 +45,28 @@ public:
                                ConnectionManager& manager,
                                MqttServer& server):
         Connection(std::move(socket), manager),
+        _connected(true),
         _mqttServer(server),
         _stream(BUFFER_SIZE) {
 
     }
 
     virtual void handleRead(std::size_t numBytes) override {
-        _stream.read(_mqttServer, *this, getBytes(numBytes));
+        if(_connected) _stream.read(_mqttServer, *this, getBytes(numBytes));
     }
 
     virtual void write(std::vector<ubyte> bytes) override {
-        writeBytes(bytes);
+        if(_connected) writeBytes(bytes);
     }
 
     virtual void disconnect() override {
+        _connected = false;
         stop();
     }
 
 private:
 
+    bool _connected;
     MqttServer& _mqttServer;
     MqttStream _stream;
 
