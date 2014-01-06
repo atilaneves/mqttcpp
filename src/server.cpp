@@ -19,7 +19,6 @@ void MqttConnection::newMessage(std::string topic, std::vector<ubyte> payload) {
 
 void MqttServer::newConnection(MqttConnection& connection,
                                const MqttConnect* connect) {
-    std::cout << "New connection " << std::endl;
     if(!connect) {
         std::cerr << "Invalid connect message" << std::endl;
         return;
@@ -69,7 +68,6 @@ void MqttServer::publish(std::string topic, std::string payload) {
 
 
 void MqttServer::publish(std::string topic, std::vector<ubyte> payload) {
-    std::cout << "Publishing on topic " << topic << std::endl;
     _broker.publish(topic, payload);
 }
 

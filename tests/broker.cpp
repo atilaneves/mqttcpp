@@ -95,6 +95,7 @@ struct WildCards: public TestCase {
         checkMatches("finance/stock", "finance/stock/ibm", false);
         checkMatches("topics/foo/bar", "topics/foo/#", true);
         checkMatches("topics/bar/baz/boo", "topics/foo/#", false);
+        checkMatches("topics/dir/foo", "#", true);
     }
 
     void checkMatches(std::string pubTopic, std::string subTopic, bool matches) {

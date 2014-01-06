@@ -2,7 +2,7 @@
 #include "message.hpp"
 #include <algorithm>
 #include <boost/algorithm/string.hpp>
-#include <iostream>
+
 
 namespace {
 
@@ -93,7 +93,7 @@ void SubscriptionTree::publish(std::string topic, std::deque<std::string> topPar
 
 void SubscriptionTree::publish(std::string topic, std::deque<std::string> topParts,
                                std::vector<ubyte> payload,
-                               std::unordered_map<std::string, Node*> nodes) {
+                               std::unordered_map<std::string, Node*>& nodes) {
     //check the cache first
     if(_useCache && _cache.count(topic)) {
         for(auto s: _cache[topic]) s->newMessage(topic, payload);
@@ -139,7 +139,7 @@ void SubscriptionTree::publishLeaf(Subscription* sub, std::string topic, std::ve
 void SubscriptionTree::addSubscriptionImpl(Subscription* s,
                                            std::deque<std::string> parts,
                                            Node* parent,
-                                           std::unordered_map<std::string, Node*> nodes) {
+                                           std::unordered_map<std::string, Node*>& nodes) {
     auto part = parts.front();
     parts.pop_front();
     auto node = addOrFindNode(part, parent, nodes);
@@ -152,7 +152,7 @@ void SubscriptionTree::addSubscriptionImpl(Subscription* s,
 
 
 auto SubscriptionTree::addOrFindNode(std::string part, Node* parent,
-                                      std::unordered_map<std::string, Node*> nodes) -> Node* {
+                                      std::unordered_map<std::string, Node*>& nodes) -> Node* {
     if(nodes.count(part) && part == nodes[part]->part) {
         return nodes[part];
     }

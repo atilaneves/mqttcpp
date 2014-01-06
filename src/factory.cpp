@@ -28,7 +28,7 @@ std::unique_ptr<MqttMessage> MqttFactory::create(std::vector<ubyte> bytes) {
     }
 
     cereal.reset(); //so the messages created below can re-read the header
-    std::cout << "Got a message of type " << (int)fixedHeader.type << std::endl;
+
     switch(fixedHeader.type) {
     case MqttType::CONNECT:
         return cereal.create<MqttConnect>(fixedHeader);

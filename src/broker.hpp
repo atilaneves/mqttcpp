@@ -40,7 +40,7 @@ private:
 
 
 struct SubscriptionTree {
-private:
+//private:
     struct Node {
         Node(std::string pt, Node* pr):part(pt), parent(pr) {}
         std::string part;
@@ -61,7 +61,7 @@ public:
                  std::vector<ubyte> payload);
     void publish(std::string topic, std::deque<std::string> topParts,
                  std::vector<ubyte> payload,
-                 std::unordered_map<std::string, Node*> nodes);
+                 std::unordered_map<std::string, Node*>& nodes);
     void publishLeaves(std::string topic, std::vector<ubyte> payload,
                        std::deque<std::string> topParts,
                        std::vector<Subscription*> subscriptions);
@@ -78,9 +78,9 @@ private:
     void addSubscriptionImpl(Subscription* s,
                              std::deque<std::string> parts,
                              Node* parent,
-                             std::unordered_map<std::string, Node*> nodes);
+                             std::unordered_map<std::string, Node*>& nodes);
     Node* addOrFindNode(std::string part, Node* parent,
-                        std::unordered_map<std::string, Node*> nodes);
+                        std::unordered_map<std::string, Node*>& nodes);
     void clearCache() { if(_useCache) _cache.clear(); }
 
     void removeNode(Node* parent, Node* child);
