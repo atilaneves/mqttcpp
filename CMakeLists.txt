@@ -42,8 +42,8 @@ file(GLOB CEREAL_SRC cereal/src/*.cpp)
 add_library(cereal ${CEREAL_SRC})
 
 
-file(GLOB SRC src/*.cpp)
-include_directories(cereal/src)
+file(GLOB SRC src/*.cpp src/boost/*.cpp)
+include_directories(cereal/src src/boost)
 add_library(mqttcpp ${SRC})
 target_link_libraries(mqttcpp cereal)
 
