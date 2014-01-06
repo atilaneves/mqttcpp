@@ -1,4 +1,5 @@
 #include "mqtt_tcp_server.hpp"
+#include "stream.hpp"
 #include <signal.h>
 
 using boost::asio::ip::tcp;
@@ -39,14 +40,26 @@ public:
     MqttTcpConnection(const MqttTcpConnection&) = delete;
     MqttTcpConnection& operator=(const MqttTcpConnection&) = delete;
 
+    enum { BUFFER_SIZE = 16384 };
     explicit MqttTcpConnection(boost::asio::ip::tcp::socket socket,
-                               ConnectionManager& manager):
-        Connection(std::move(socket), manager) {
+                               ConnectionManager& manager,
+                               MqttServer& server):
+        Connection(std::move(socket), manager),
+        _mqttServer(server),
+        _stream(BUFFER_SIZE) {
+
+
     }
 
     virtual void handleRead(std::size_t numBytes) override {
+        //_stream.read(server, *this, getBytes(numBytes));
         writeBytes(getBytes(numBytes));
     }
+
+private:
+
+    MqttServer& _mqttServer;
+    MqttStream _stream;
 
 };
 } //anonymous namespace
@@ -58,7 +71,8 @@ void MqttTcpServer::doAccept() {
                                if(!error) {
                                    _connectionManager.start(std::make_shared<MqttTcpConnection>(
                                                                 std::move(_socket),
-                                                                _connectionManager));
+                                                                _connectionManager,
+                                                                _mqttServer));
                                }
 
                                doAccept();

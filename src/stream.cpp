@@ -19,8 +19,8 @@ void MqttStream::operator<<(std::vector<ubyte> bytes) {
     updateRemaining();
 }
 
-void MqttStream::read(MqttServer& server, MqttConnection& connection) {
-    *this << connection.read();
+void MqttStream::read(MqttServer& server, MqttConnection& connection, std::vector<ubyte> bytes) {
+    *this << bytes;
 
     while(hasMessages()) {
         createMessage()->handle(server, connection);

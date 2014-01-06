@@ -4,7 +4,7 @@
 #include <boost/asio.hpp>
 #include "connection.hpp"
 #include "connection_manager.hpp"
-
+#include "server.hpp"
 
 class MqttTcpServer {
 public:
@@ -23,6 +23,7 @@ private:
     boost::asio::ip::tcp::acceptor _acceptor;
     ConnectionManager _connectionManager;
     boost::asio::ip::tcp::socket _socket;
+    MqttServer _mqttServer;
 
     void doAccept();
     void doAwaitStop();

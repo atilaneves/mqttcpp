@@ -13,7 +13,7 @@ public:
     MqttStream(ulong bufferSize);
 
     void operator<<(std::vector<ubyte> bytes);
-    void read(MqttServer& server, MqttConnection& connection);
+    void read(MqttServer& server, MqttConnection& connection, std::vector<ubyte> bytes);
     bool hasMessages() const;
     bool empty() const;
     std::unique_ptr<MqttMessage> createMessage();
