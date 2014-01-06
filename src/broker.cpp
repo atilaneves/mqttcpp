@@ -44,6 +44,10 @@ bool Subscription::isTopic(std::vector<std::string> topics) const {
     return std::find(topics.cbegin(), topics.cend(), _topic) == topics.cend();
 }
 
+SubscriptionTree::SubscriptionTree():
+    _useCache(false) {
+}
+
 void SubscriptionTree::addSubscription(Subscription* s, std::deque<std::string> parts) {
     assert(parts.size());
     clearCache();
@@ -157,7 +161,7 @@ auto SubscriptionTree::addOrFindNode(std::string part, NodePtr parent,
     if(nodes.count(part) && part == nodes[part]->part) {
         return nodes[part];
     }
-    auto node = new Node(part, parent);
+    auto node = std::make_shared<Node>(part, parent);
     nodes[part] = node;
     return node;
 }

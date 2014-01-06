@@ -5,7 +5,10 @@
 
 MqttStream::MqttStream(ulong bufferSize):
     _buffer(bufferSize),
-    _remaining(0) {
+    _remaining(),
+    _bytesRead(),
+    _bytesStart()
+{
 }
 
 void MqttStream::operator<<(std::vector<ubyte> bytes) {

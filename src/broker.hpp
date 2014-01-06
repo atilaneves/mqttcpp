@@ -7,7 +7,7 @@
 #include <deque>
 #include <string>
 #include <unordered_map>
-
+#include <memory>
 
 class MqttSubscriber {
 public:
@@ -42,7 +42,7 @@ struct SubscriptionTree {
 private:
 
     struct Node {
-        using NodePtr = Node*;
+        using NodePtr = std::shared_ptr<Node>;
         Node(std::string pt, NodePtr pr):part(pt), parent(pr) {}
         std::string part;
         NodePtr parent;
@@ -53,6 +53,8 @@ private:
 public:
 
     using NodePtr = Node::NodePtr;
+
+    SubscriptionTree();
 
     void addSubscription(Subscription* s, std::deque<std::string> parts);
     void removeSubscription(MqttSubscriber& subscriber,
