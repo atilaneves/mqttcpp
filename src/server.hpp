@@ -11,7 +11,7 @@
 class MqttConnection: public MqttSubscriber {
 public:
     virtual void newMessage(std::string topic, std::vector<ubyte> payload) override;
-    virtual void read(std::vector<ubyte> bytes);
+    virtual void read(std::vector<ubyte>& bytes) = 0;
 
     virtual void write(std::vector<ubyte> bytes) = 0;
     virtual void disconnect() = 0;

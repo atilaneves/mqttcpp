@@ -15,10 +15,6 @@ void MqttConnection::newMessage(std::string topic, std::vector<ubyte> payload) {
     write(encode(MqttPublish(topic, payload)));
 }
 
-void MqttConnection::read(std::vector<ubyte> bytes) {
-    (void)bytes;
-}
-
 
 
 void MqttServer::newConnection(MqttConnection& connection,

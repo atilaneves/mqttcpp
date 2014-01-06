@@ -14,7 +14,6 @@ public:
 
     void operator<<(std::vector<ubyte> bytes);
     void read(MqttServer& server, MqttConnection& connection, ulong size);
-    void read(std::vector<ubyte> bytes);
     bool hasMessages() const;
     bool empty() const;
     std::unique_ptr<MqttMessage> createMessage();

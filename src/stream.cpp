@@ -1,18 +1,18 @@
 #include "stream.hpp"
 #include "factory.hpp"
 #include "Decerealiser.hpp"
-#include <cassert>
 
-MqttStream::MqttStream(ulong bufferSize) {
-    allocate(bufferSize);
+
+MqttStream::MqttStream(ulong bufferSize):
+    _buffer(bufferSize),
+    _remaining(0) {
 }
 
 void MqttStream::operator<<(std::vector<ubyte> bytes) {
     checkRealloc(bytes.size());
     const auto end = _bytesRead + bytes.size();
 
-    std::vector<ubyte> buf;
-    std::copy(bytes.cbegin(), bytes.cend(), std::back_inserter(buf));
+    std::copy(bytes.cbegin(), bytes.cend(), _buffer.begin() + _bytesRead);
 
     _bytes = std::vector<ubyte>(_buffer.cbegin() + _bytesStart, _buffer.cbegin() + end);
     _bytesRead += bytes.size();
@@ -20,22 +20,16 @@ void MqttStream::operator<<(std::vector<ubyte> bytes) {
 }
 
 void MqttStream::read(MqttServer& server, MqttConnection& connection, ulong size) {
-    checkRealloc(size);
-    const auto end = _bytesRead + size;
+    (void)size;
+    std::vector<ubyte> toRead;
+    //connection.read(std::vector<ubyte>(_buffer.cbegin() + _bytesRead, _buffer.cbegin() + end));
+    connection.read(toRead);
 
-    connection.read(std::vector<ubyte>(_buffer.cbegin() + _bytesRead, _buffer.cbegin() + end));
-
-    _bytes = std::vector<ubyte>(_buffer.cbegin() + _bytesStart, _buffer.cbegin() + end);
-    _bytesRead += size;
-    updateRemaining();
+    *this << toRead;
 
     while(hasMessages()) {
         createMessage()->handle(server, connection);
     }
-}
-
-void MqttStream::read(std::vector<ubyte> bytes) {
-    (void)bytes;
 }
 
 bool MqttStream::hasMessages() const {
@@ -61,16 +55,7 @@ std::unique_ptr<MqttMessage> MqttStream::createMessage() {
     return msg;
 }
 
-void MqttStream::allocate(ulong bufferSize) {
-    assert(bufferSize > 10);
-    _buffer = std::vector<ubyte>(bufferSize);
-}
-
 void MqttStream::checkRealloc(ulong numBytes) {
-    if(!_buffer.size()) {
-        allocate();
-    }
-
     if(_bytesRead + numBytes > _buffer.size()) {
         copy(_bytes.cbegin(), _bytes.cend(), _buffer.begin());
         _bytesStart = 0;
