@@ -26,24 +26,41 @@ void MqttTcpServer::run() {
     _ioService.run();
 }
 
+void MqttTcpServer::doAwaitStop() {
+    _signals.async_wait([this](boost::system::error_code, int) {
+            _acceptor.close();
+            _connectionManager.stopAll();
+        });
+}
+
+namespace {
+class MqttTcpConnection: public Connection {
+public:
+    MqttTcpConnection(const MqttTcpConnection&) = delete;
+    MqttTcpConnection& operator=(const MqttTcpConnection&) = delete;
+
+    explicit MqttTcpConnection(boost::asio::ip::tcp::socket socket,
+                               ConnectionManager& manager):
+        Connection(std::move(socket), manager) {
+    }
+
+    virtual void handleRead(std::size_t numBytes) override {
+        write(getBytes(numBytes));
+    }
+
+};
+} //anonymous namespace
+
 void MqttTcpServer::doAccept() {
     _acceptor.async_accept(_socket,
                            [this](boost::system::error_code error) {
                                if(!_acceptor.is_open()) return;
                                if(!error) {
-                                   _connectionManager.start(std::make_shared<Connection>(
+                                   _connectionManager.start(std::make_shared<MqttTcpConnection>(
                                                                 std::move(_socket),
                                                                 _connectionManager));
                                }
 
                                doAccept();
                            });
-}
-
-
-void MqttTcpServer::doAwaitStop() {
-    _signals.async_wait([this](boost::system::error_code, int) {
-            _acceptor.close();
-            _connectionManager.stopAll();
-        });
 }
