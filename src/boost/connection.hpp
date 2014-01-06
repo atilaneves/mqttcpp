@@ -19,7 +19,7 @@ public:
 
     void start();
     void stop();
-    void write(std::vector<ubyte> bytes);
+    void writeBytes(std::vector<ubyte> bytes);
 
 protected:
 

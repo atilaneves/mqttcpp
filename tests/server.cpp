@@ -13,8 +13,8 @@ struct TestMqttConnection: public MqttConnection {
         connected(true), connect(std::move(c)) {
     }
 
-    virtual void read(std::vector<ubyte>& bytes) override {
-        (void)bytes;
+    virtual std::vector<ubyte> read() override {
+        return {};
     }
 
     void write(std::vector<ubyte> bytes) override {

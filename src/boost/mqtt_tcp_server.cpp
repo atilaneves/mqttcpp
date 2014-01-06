@@ -45,7 +45,7 @@ public:
     }
 
     virtual void handleRead(std::size_t numBytes) override {
-        write(getBytes(numBytes));
+        writeBytes(getBytes(numBytes));
     }
 
 };
