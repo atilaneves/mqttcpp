@@ -8,4 +8,30 @@
 #include <memory>
 
 
+class MqttStream {
+public:
+    MqttStream(ulong bufferSize);
+
+    void operator<<(std::vector<ubyte> bytes);
+    void read(MqttServer& server, MqttConnection& connection, ulong size);
+    void read(std::vector<ubyte> bytes);
+    bool hasMessages() const;
+    bool empty() const;
+    std::unique_ptr<MqttMessage> createMessage();
+
+private:
+
+    std::vector<ubyte> _buffer;
+    std::vector<ubyte> _bytes;
+    int _remaining;
+    ulong _bytesRead;
+    ulong _bytesStart;
+
+    void allocate(ulong bufferSize = 128);
+    void checkRealloc(ulong numBytes);
+    void updateRemaining();
+    std::vector<ubyte> slice() const;
+};
+
+
 #endif // STREAM_H_
