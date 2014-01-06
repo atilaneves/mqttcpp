@@ -35,7 +35,7 @@ void MqttTcpServer::doAwaitStop() {
 }
 
 namespace {
-class MqttTcpConnection: public Connection {
+class MqttTcpConnection: public Connection, public MqttConnection {
 public:
     MqttTcpConnection(const MqttTcpConnection&) = delete;
     MqttTcpConnection& operator=(const MqttTcpConnection&) = delete;
@@ -48,12 +48,18 @@ public:
         _mqttServer(server),
         _stream(BUFFER_SIZE) {
 
-
     }
 
     virtual void handleRead(std::size_t numBytes) override {
-        //_stream.read(server, *this, getBytes(numBytes));
-        writeBytes(getBytes(numBytes));
+        _stream.read(_mqttServer, *this, getBytes(numBytes));
+    }
+
+    virtual void write(std::vector<ubyte> bytes) override {
+        writeBytes(bytes);
+    }
+
+    virtual void disconnect() override {
+        stop();
     }
 
 private:

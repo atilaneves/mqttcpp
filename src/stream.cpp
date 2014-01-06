@@ -1,7 +1,7 @@
 #include "stream.hpp"
 #include "factory.hpp"
 #include "Decerealiser.hpp"
-
+#include <iostream>
 
 MqttStream::MqttStream(ulong bufferSize):
     _buffer(bufferSize),
@@ -18,6 +18,13 @@ void MqttStream::operator<<(std::vector<ubyte> bytes) {
     _bytesRead += bytes.size();
     updateRemaining();
 }
+
+// template<typename I, typename T>
+// static void printVector(T vec) {
+//     std::cout << "[";
+//     for(const auto& b: vec) std::cout << static_cast<I>(b) << ", ";
+//     std::cout << "]" << std::endl;
+// }
 
 void MqttStream::read(MqttServer& server, MqttConnection& connection, std::vector<ubyte> bytes) {
     *this << bytes;

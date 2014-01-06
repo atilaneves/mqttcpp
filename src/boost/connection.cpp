@@ -1,5 +1,6 @@
 #include "connection.hpp"
 #include "connection_manager.hpp"
+#include <iostream>
 
 Connection::Connection(boost::asio::ip::tcp::socket socket,
                        ConnectionManager& manager):
@@ -23,6 +24,7 @@ void Connection::doRead() {
         [this, self](boost::system::error_code error, std::size_t numBytes) {
             if(!error) {
                 handleRead(numBytes);
+                doRead();
             } else if(error != boost::asio::error::operation_aborted) {
                 _connectionManager.stop(shared_from_this());
             }

@@ -92,6 +92,10 @@ void MqttConnect::cerealise(Cereal& cereal) {
     if(hasPassword) cereal.grain(password);
 }
 
+void MqttConnect::handle(MqttServer& server, MqttConnection& connection) const {
+    server.newConnection(connection, this);
+}
+
 
 MqttConnack::MqttConnack():
     header(MqttType::CONNACK, false, 0, false, 2),

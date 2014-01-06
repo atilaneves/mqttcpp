@@ -61,6 +61,8 @@ class MqttConnect: public MqttMessage {
 
     MqttConnect(MqttFixedHeader h);
 
+    void handle(MqttServer& server, MqttConnection& connection) const override;
+
     void cerealise(Cereal& cereal);
     bool isBadClientId() const { return clientId.length() < 1 || clientId.length() > 23; }
 

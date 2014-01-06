@@ -20,7 +20,7 @@ class MqttServer {
 public:
 
     void newConnection(MqttConnection& connection,
-                       MqttConnect* connect);
+                       const MqttConnect* connect);
     void subscribe(MqttConnection& connection, ushort msgId,
                    std::vector<std::string> topics);
     void subscribe(MqttConnection& connection, ushort msgId,

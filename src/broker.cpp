@@ -2,7 +2,7 @@
 #include "message.hpp"
 #include <algorithm>
 #include <boost/algorithm/string.hpp>
-
+#include <iostream>
 
 namespace {
 
