@@ -44,6 +44,7 @@ private:
     struct Node {
         using NodePtr = std::shared_ptr<Node>;
         Node(std::string pt, NodePtr pr):part(pt), parent(pr) {}
+        ~Node() { for(auto l: leaves) delete l; }
         std::string part;
         NodePtr parent;
         std::unordered_map<std::string, NodePtr> branches;
