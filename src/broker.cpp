@@ -43,6 +43,7 @@ bool Subscription::isSubscription(const MqttSubscriber& subscriber,
 bool Subscription::isTopic(std::vector<std::string> topics) const {
     return std::find(topics.cbegin(), topics.cend(), _topic) == topics.cend();
 }
+
 void SubscriptionTree::addSubscription(Subscription* s, std::deque<std::string> parts) {
     assert(parts.size());
     clearCache();
@@ -50,9 +51,9 @@ void SubscriptionTree::addSubscription(Subscription* s, std::deque<std::string> 
 }
 
 void SubscriptionTree::removeSubscription(MqttSubscriber& subscriber,
-                                          std::unordered_map<std::string, Node*>& nodes) {
+                                          std::unordered_map<std::string, NodePtr>& nodes) {
     clearCache();
-    std::unordered_map<std::string, Node*> newNodes = nodes;
+    std::unordered_map<std::string, NodePtr> newNodes = nodes;
     for(auto n: newNodes) {
         if(n.second->leaves.size()) {
             std::remove_if(n.second->leaves.begin(), n.second->leaves.end(),
@@ -68,9 +69,9 @@ void SubscriptionTree::removeSubscription(MqttSubscriber& subscriber,
 
 void SubscriptionTree::removeSubscription(MqttSubscriber& subscriber,
                                           std::vector<std::string> topic,
-                                          std::unordered_map<std::string, Node*>& nodes) {
+                                          std::unordered_map<std::string, NodePtr>& nodes) {
     clearCache();
-    std::unordered_map<std::string, Node*> newNodes = nodes;
+    std::unordered_map<std::string, NodePtr> newNodes = nodes;
     for(auto n: newNodes) {
         if(n.second->leaves.size()) {
             std::remove_if(n.second->leaves.begin(), n.second->leaves.end(),
@@ -93,7 +94,7 @@ void SubscriptionTree::publish(std::string topic, std::deque<std::string> topPar
 
 void SubscriptionTree::publish(std::string topic, std::deque<std::string> topParts,
                                std::vector<ubyte> payload,
-                               std::unordered_map<std::string, Node*>& nodes) {
+                               std::unordered_map<std::string, NodePtr>& nodes) {
     //check the cache first
     if(_useCache && _cache.count(topic)) {
         for(auto s: _cache[topic]) s->newMessage(topic, payload);
@@ -138,8 +139,8 @@ void SubscriptionTree::publishLeaf(Subscription* sub, std::string topic, std::ve
 
 void SubscriptionTree::addSubscriptionImpl(Subscription* s,
                                            std::deque<std::string> parts,
-                                           Node* parent,
-                                           std::unordered_map<std::string, Node*>& nodes) {
+                                           NodePtr parent,
+                                           std::unordered_map<std::string, NodePtr>& nodes) {
     auto part = parts.front();
     parts.pop_front();
     auto node = addOrFindNode(part, parent, nodes);
@@ -151,8 +152,8 @@ void SubscriptionTree::addSubscriptionImpl(Subscription* s,
 }
 
 
-auto SubscriptionTree::addOrFindNode(std::string part, Node* parent,
-                                      std::unordered_map<std::string, Node*>& nodes) -> Node* {
+auto SubscriptionTree::addOrFindNode(std::string part, NodePtr parent,
+                                     std::unordered_map<std::string, NodePtr>& nodes) -> NodePtr {
     if(nodes.count(part) && part == nodes[part]->part) {
         return nodes[part];
     }
@@ -162,7 +163,7 @@ auto SubscriptionTree::addOrFindNode(std::string part, Node* parent,
 }
 
 
-void SubscriptionTree::removeNode(Node* parent, Node* child) {
+void SubscriptionTree::removeNode(NodePtr parent, NodePtr child) {
     if(parent) {
         parent->branches.erase(child->part);
     } else {

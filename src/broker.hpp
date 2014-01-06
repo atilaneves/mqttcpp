@@ -38,30 +38,33 @@ private:
 };
 
 
-
 struct SubscriptionTree {
-//private:
+private:
+
     struct Node {
-        Node(std::string pt, Node* pr):part(pt), parent(pr) {}
+        using NodePtr = Node*;
+        Node(std::string pt, NodePtr pr):part(pt), parent(pr) {}
         std::string part;
-        Node* parent;
-        std::unordered_map<std::string, Node*> branches;
+        NodePtr parent;
+        std::unordered_map<std::string, NodePtr> branches;
         std::vector<Subscription*> leaves;
     };
 
 public:
 
+    using NodePtr = Node::NodePtr;
+
     void addSubscription(Subscription* s, std::deque<std::string> parts);
     void removeSubscription(MqttSubscriber& subscriber,
-                            std::unordered_map<std::string, Node*>& nodes);
+                            std::unordered_map<std::string, NodePtr>& nodes);
     void removeSubscription(MqttSubscriber& subscriber,
                             std::vector<std::string> topic,
-                            std::unordered_map<std::string, Node*>& nodes);
+                            std::unordered_map<std::string, NodePtr>& nodes);
     void publish(std::string topic, std::deque<std::string> topParts,
                  std::vector<ubyte> payload);
     void publish(std::string topic, std::deque<std::string> topParts,
                  std::vector<ubyte> payload,
-                 std::unordered_map<std::string, Node*>& nodes);
+                 std::unordered_map<std::string, NodePtr>& nodes);
     void publishLeaves(std::string topic, std::vector<ubyte> payload,
                        std::deque<std::string> topParts,
                        std::vector<Subscription*> subscriptions);
@@ -72,18 +75,18 @@ private:
 
     bool _useCache;
     std::unordered_map<std::string, std::vector<Subscription*>> _cache;
-    std::unordered_map<std::string, Node*> _nodes;
+    std::unordered_map<std::string, NodePtr> _nodes;
     friend class MqttBroker;
 
     void addSubscriptionImpl(Subscription* s,
                              std::deque<std::string> parts,
-                             Node* parent,
-                             std::unordered_map<std::string, Node*>& nodes);
-    Node* addOrFindNode(std::string part, Node* parent,
-                        std::unordered_map<std::string, Node*>& nodes);
+                             NodePtr parent,
+                             std::unordered_map<std::string, NodePtr>& nodes);
+    NodePtr addOrFindNode(std::string part, NodePtr parent,
+                        std::unordered_map<std::string, NodePtr>& nodes);
     void clearCache() { if(_useCache) _cache.clear(); }
 
-    void removeNode(Node* parent, Node* child);
+    void removeNode(NodePtr parent, NodePtr child);
 };
 
 
@@ -108,5 +111,6 @@ private:
                  std::vector<ubyte> payload);
 };
 
+using NodePtr = SubscriptionTree::NodePtr;
 
 #endif // BROKER_H_
