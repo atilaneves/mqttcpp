@@ -48,7 +48,10 @@ add_library(mqttcpp ${SRC})
 target_link_libraries(mqttcpp cereal)
 
 add_executable(mqtt main.cpp)
-target_link_libraries(mqtt mqttcpp)
+target_link_libraries(mqtt mqttcpp ${Boost_LIBRARIES})
+if(NOT WIN32)
+  target_link_libraries(mqtt pthread)
+endif()
 
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
