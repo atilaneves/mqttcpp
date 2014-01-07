@@ -32,7 +32,7 @@ void Connection::doRead() {
 void Connection::writeBytes(std::vector<ubyte> bytes) {
     auto self(shared_from_this());
     boost::asio::async_write(_socket, boost::asio::buffer(bytes),
-                             [this, self](boost::system::error_code error, std::size_t) {
+                             [this, self](boost::system::error_code, std::size_t) {
                              });
 }
 

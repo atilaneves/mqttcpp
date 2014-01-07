@@ -19,7 +19,7 @@ struct TestMqttConnection: public MqttConnection {
 
     void newMessage(std::string topic, std::vector<ubyte> payload) override {
         (void)topic;
-        payloads.push_back(std::string(payload.begin(), payload.end()));
+        payloads.emplace_back(payload.begin(), payload.end());
     }
 
     void disconnect() override { connected = false; }
