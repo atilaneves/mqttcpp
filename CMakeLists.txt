@@ -16,8 +16,9 @@ if(NOT CMAKE_BUILD_TYPE)
       FORCE)
 endif(NOT CMAKE_BUILD_TYPE)
 
-set(MY_FLAGS_DEBUG "-Wall -Wextra -Werror -g -pg -fno-inline")
-set(MY_FLAGS_RELEASE "-Wall -Wextra -Werror -O2")
+set(MY_COMMON_FLAGS "-Wall -Wextra -Werror")
+set(MY_FLAGS_DEBUG "${MY_COMMON_FLAGS} -g -pg -fno-inline")
+set(MY_FLAGS_RELEASE "${MY_COMMON_FLAGS} -O2")
 
 set(CMAKE_C_FLAGS_DEBUG ${MY_FLAGS_DEBUG})
 set(CMAKE_CXX_FLAGS_DEBUG "${MY_FLAGS_DEBUG} -std=c++11")
@@ -43,7 +44,7 @@ add_library(cereal ${CEREAL_SRC})
 
 
 file(GLOB SRC src/*.cpp src/boost/*.cpp)
-include_directories(cereal/src src/boost)
+include_directories(src cereal/src src/boost)
 add_library(mqttcpp ${SRC})
 target_link_libraries(mqttcpp cereal)
 
@@ -56,7 +57,6 @@ endif()
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
   include_directories(unit-thread/lib)
-  include_directories(src)
   file(GLOB TEST_SRCS
     ${CMAKE_SOURCE_DIR}/tests/*.cpp
     ${CMAKE_SOURCE_DIR}/unit-thread/lib/*.cpp

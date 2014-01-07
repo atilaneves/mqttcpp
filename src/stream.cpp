@@ -6,22 +6,21 @@
 
 MqttStream::MqttStream(ulong bufferSize):
     _buffer(bufferSize),
-    _remaining(),
-    _bytesRead(),
-    _bytesStart()
+    _bytes(),
+    _remaining(0),
+    _bytesRead(0),
+    _bytesStart(0)
 {
 }
 
-void MqttStream::operator<<(std::vector<ubyte> bytes) {
-    checkRealloc(bytes.size());
-    const auto end = _bytesRead + bytes.size();
-
-    std::copy(bytes.cbegin(), bytes.cend(), _buffer.begin() + _bytesRead);
-
-    _bytes = std::vector<ubyte>(_buffer.cbegin() + _bytesStart, _buffer.cbegin() + end);
-    _bytesRead += bytes.size();
-    updateRemaining();
+bool MqttStream::hasMessages() const {
+    return _bytes.size() >= static_cast<size_t>(_remaining + MqttFixedHeader::SIZE);
 }
+
+bool MqttStream::empty() const {
+    return _bytes.size() == 0;
+}
+
 
 // template<typename I, typename T>
 // static void printVector(T vec) {
@@ -44,12 +43,32 @@ void MqttStream::read(MqttServer& server, MqttConnection& connection, std::vecto
     }
 }
 
-bool MqttStream::hasMessages() const {
-    return _bytes.size() >= static_cast<size_t>(_remaining + MqttFixedHeader::SIZE);
+void MqttStream::operator<<(std::vector<ubyte> bytes) {
+    checkRealloc(bytes.size());
+    const auto end = _bytesRead + bytes.size();
+
+    std::copy(bytes.cbegin(), bytes.cend(), _buffer.begin() + _bytesRead);
+
+    _bytes = std::vector<ubyte>(_buffer.cbegin() + _bytesStart, _buffer.cbegin() + end);
+    _bytesRead += bytes.size();
+    updateRemaining();
 }
 
-bool MqttStream::empty() const {
-    return _bytes.size() == 0;
+void MqttStream::checkRealloc(ulong numBytes) {
+    if(_bytesRead + numBytes > _buffer.size()) {
+        //std::cout << "Realloc!" << std::endl;
+        copy(_bytes.cbegin(), _bytes.cend(), _buffer.begin());
+        _bytesStart = 0;
+        _bytesRead = _bytes.size();
+        _bytes = std::vector<ubyte>(_buffer.cbegin(), _buffer.cbegin() + _bytesRead);
+    }
+}
+
+void MqttStream::updateRemaining() {
+    if(!_remaining && _bytes.size() >= MqttFixedHeader::SIZE) {
+        Decerealiser cereal(slice());
+        _remaining = cereal.value<MqttFixedHeader>().remaining;
+    }
 }
 
 std::unique_ptr<MqttMessage> MqttStream::createMessage() {
@@ -65,23 +84,6 @@ std::unique_ptr<MqttMessage> MqttStream::createMessage() {
     updateRemaining();
 
     return msg;
-}
-
-void MqttStream::checkRealloc(ulong numBytes) {
-    if(_bytesRead + numBytes > _buffer.size()) {
-        std::cout << "Realloc!" << std::endl;
-        copy(_bytes.cbegin(), _bytes.cend(), _buffer.begin());
-        _bytesStart = 0;
-        _bytesRead = _bytes.size();
-        _bytes = std::vector<ubyte>(_buffer.cbegin(), _buffer.cbegin() + _bytesRead);
-    }
-}
-
-void MqttStream::updateRemaining() {
-    if(!_remaining && _bytes.size() >= MqttFixedHeader::SIZE) {
-        Decerealiser cereal(slice());
-        _remaining = cereal.value<MqttFixedHeader>().remaining;
-    }
 }
 
 std::vector<ubyte> MqttStream::slice() const {

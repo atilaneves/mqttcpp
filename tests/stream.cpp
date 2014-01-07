@@ -85,3 +85,29 @@ struct TwoMqttInOnePacket: public TestCase {
     }
 };
 REGISTER_TEST(stream, TwoMqttInOnePacket)
+
+
+struct MqttInLoadsOfPackets: public TestCase {
+    virtual void test() override {
+        MqttStream stream(128);
+        checkFalse(stream.hasMessages());
+        checkTrue(stream.empty());
+
+        for(int i = 0; i < 200; ++i) {
+            std::vector<ubyte> bytes{ 0x3c, 0x0f, // fixed header
+                    0x00, 0x03, 't', 'o', 'p', //topic name
+                    0x00, 0x21, //message ID
+                    'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', //payload
+                    };
+            stream << bytes;
+            checkFalse(stream.empty());
+            checkTrue(stream.hasMessages());
+
+            const auto publish = dynamic_cast<MqttPublish*>(stream.createMessage().get());
+            checkNotNull(publish);
+            checkTrue(stream.empty());
+            checkFalse(stream.hasMessages());
+        }
+    }
+};
+REGISTER_TEST(stream, MqttInLoadsOfPackets)
