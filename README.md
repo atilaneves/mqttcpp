@@ -9,4 +9,6 @@ the directory after `git clone` in order for this to compile.
 Manually translated from [an MQTT broker written in D](https://github.com/atilaneves/mqtt)
 since that was the easiest way I could get a broker going in C++.
 
-Doesn't yet implement MQTT, work in progress.
+Doesn't implement all of MQTT, the feature set is on par with the D version. Buggy, one
+of the unit tests fails and running it for long enough will cause it to corrupt memory
+and crash.
