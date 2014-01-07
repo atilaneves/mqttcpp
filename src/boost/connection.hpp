@@ -5,7 +5,6 @@
 #include <array>
 #include <boost/asio.hpp>
 
-
 class ConnectionManager;
 
 class Connection : public std::enable_shared_from_this<Connection> {
@@ -23,16 +22,16 @@ public:
 
 protected:
 
-    std::vector<ubyte> getBytes(std::size_t numBytes);
+    std::vector<ubyte> getBytes(std::size_t numBytes) const;
 
 private:
 
     boost::asio::ip::tcp::socket _socket;
     ConnectionManager& _connectionManager;
-    std::array<char, 16384> _buffer;
+    std::array<unsigned char, 16384> _buffer;
 
     void doRead();
-    virtual void handleRead(std::size_t numBytes) = 0;
+    virtual void handleRead(std::vector<ubyte> bytes) = 0;
 };
 
 typedef std::shared_ptr<Connection> ConnectionPtr;

@@ -1,6 +1,7 @@
 #include "stream.hpp"
 #include "factory.hpp"
 #include "Decerealiser.hpp"
+#include <cassert>
 #include <iostream>
 
 MqttStream::MqttStream(ulong bufferSize):
@@ -33,7 +34,13 @@ void MqttStream::read(MqttServer& server, MqttConnection& connection, std::vecto
     *this << bytes;
 
     while(hasMessages()) {
-        createMessage()->handle(server, connection);
+        auto msg = createMessage();
+        if(!msg) {
+            std::cerr << "null message after createMessage() even though hasMessages() was true" << std::endl;
+        }
+        assert(msg);
+
+        msg->handle(server, connection);
     }
 }
 
@@ -62,6 +69,7 @@ std::unique_ptr<MqttMessage> MqttStream::createMessage() {
 
 void MqttStream::checkRealloc(ulong numBytes) {
     if(_bytesRead + numBytes > _buffer.size()) {
+        std::cout << "Realloc!" << std::endl;
         copy(_bytes.cbegin(), _bytes.cend(), _buffer.begin());
         _bytesStart = 0;
         _bytesRead = _bytes.size();

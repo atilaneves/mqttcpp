@@ -51,8 +51,8 @@ public:
 
     }
 
-    virtual void handleRead(std::size_t numBytes) override {
-        if(_connected) _stream.read(_mqttServer, *this, getBytes(numBytes));
+    virtual void handleRead(std::vector<ubyte> bytes) override {
+        if(_connected) _stream.read(_mqttServer, *this, bytes);
     }
 
     virtual void write(std::vector<ubyte> bytes) override {
