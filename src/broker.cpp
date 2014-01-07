@@ -41,7 +41,7 @@ bool Subscription::isSubscription(const MqttSubscriber& subscriber,
 }
 
 bool Subscription::isTopic(std::vector<std::string> topics) const {
-    return std::find(topics.cbegin(), topics.cend(), _topic) == topics.cend();
+    return std::find(topics.cbegin(), topics.cend(), _topic) != topics.cend();
 }
 
 SubscriptionTree::SubscriptionTree():
@@ -54,14 +54,23 @@ void SubscriptionTree::addSubscription(Subscription* s, std::deque<std::string> 
     addSubscriptionImpl(s, parts, nullptr, _nodes);
 }
 
+//remove_if returns an iterator to the new end but actually leaves
+//the container unchanged, which isn't what I want
+template<typename T, typename F>
+void removeIf(T& container, F pred) {
+    const auto newEnd = std::remove_if(std::begin(container),
+                                       std::end(container),
+                                       pred);
+    container.resize(newEnd - std::begin(container));
+}
+
 void SubscriptionTree::removeSubscription(MqttSubscriber& subscriber,
                                           std::unordered_map<std::string, NodePtr>& nodes) {
     clearCache();
     std::unordered_map<std::string, NodePtr> newNodes = nodes;
     for(auto n: newNodes) {
         if(n.second->leaves.size()) {
-            std::remove_if(n.second->leaves.begin(), n.second->leaves.end(),
-                           [&subscriber](Subscription* l) { return l->isSubscriber(subscriber); });
+            removeIf(n.second->leaves, [&subscriber](Subscription* l) { return l->isSubscriber(subscriber); });
             if(!n.second->leaves.size() && !n.second->branches.size()) {
                 removeNode(n.second->parent, n.second);
             }
@@ -72,20 +81,19 @@ void SubscriptionTree::removeSubscription(MqttSubscriber& subscriber,
 }
 
 void SubscriptionTree::removeSubscription(MqttSubscriber& subscriber,
-                                          std::vector<std::string> topic,
+                                          std::vector<std::string> topics,
                                           std::unordered_map<std::string, NodePtr>& nodes) {
     clearCache();
     std::unordered_map<std::string, NodePtr> newNodes = nodes;
     for(auto n: newNodes) {
         if(n.second->leaves.size()) {
-            std::remove_if(n.second->leaves.begin(), n.second->leaves.end(),
-                           [&subscriber, &topic](Subscription* l) {
-                               return l->isSubscription(subscriber, topic); });
+            removeIf(n.second->leaves, [&subscriber, &topics](Subscription* l) {
+                    return l->isSubscription(subscriber, topics); });
             if(!n.second->leaves.size() && !n.second->branches.size()) {
                 removeNode(n.second->parent, n.second);
             }
         } else {
-            removeSubscription(subscriber, topic, n.second->branches);
+            removeSubscription(subscriber, topics, n.second->branches);
         }
     }
 }
