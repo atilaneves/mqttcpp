@@ -1,5 +1,6 @@
 mqtt
 =============
+[![Build Status](https://travis-ci.org/atilaneves/mqttcpp.png?branch=master)](https://travis-ci.org/atilaneves/mqttcpp)
 
 MQTT broker written in C++11, using
 [boost::asio](http://www.boost.org/doc/libs/1_55_0/doc/html/boost_asio.html)
