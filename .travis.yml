@@ -6,5 +6,6 @@ install:
  - if [ "$CXX" = "g++" ]; then export CXX="g++-4.8" CC="gcc-4.8"; fi
  - sudo apt-get install -y mercurial libboost-dev libboost-program-options-dev libboost-system-dev
  - hg clone https://atilaneves@bitbucket.org/atilaneves/unit-thread
+ - hg clone https://atilaneves@bitbucket.org/atilaneves/cereal
  - mkdir build
 script: cd build && cmake -DCMAKE_BUILD_TYPE=Debug .. && make && ./ut
