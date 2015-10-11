@@ -30,6 +30,8 @@ public:
                         std::vector<std::string> topics) const;
     bool isTopic(std::vector<std::string> topics) const;
 
+    ubyte qos() const { return _qos; }
+
 private:
     MqttSubscriber& _subscriber;
     std::string _part;
@@ -38,7 +40,7 @@ private:
 };
 
 
-struct SubscriptionTree {
+class SubscriptionTree {
 private:
 
     struct Node {

@@ -14,7 +14,7 @@ struct TestMqttConnection: public MqttConnection {
     }
 
     void write(std::vector<ubyte> bytes) override {
-        lastMsg = std::move(MqttFactory::create(bytes));
+        lastMsg = MqttFactory::create(bytes);
     }
 
     void newMessage(std::string topic, std::vector<ubyte> payload) override {

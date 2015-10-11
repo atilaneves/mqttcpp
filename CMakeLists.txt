@@ -56,6 +56,7 @@ endif()
 
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=address")
   include_directories(unit-thread/lib)
   file(GLOB TEST_SRCS
     ${CMAKE_SOURCE_DIR}/tests/*.cpp
