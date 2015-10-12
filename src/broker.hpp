@@ -67,11 +67,14 @@ public:
                             std::unordered_map<std::string, NodePtr>& nodes);
     void publish(std::string topic, std::deque<std::string> topParts,
                  const std::vector<ubyte>& payload);
-    void publish(std::string topic, std::deque<std::string> topParts,
+    void publish(std::string topic,
+                 std::deque<std::string>::const_iterator topPartsBegin,
+                 std::deque<std::string>::const_iterator topPartsEnd,
                  const std::vector<ubyte>& payload,
                  std::unordered_map<std::string, NodePtr>& nodes);
     void publishLeaves(std::string topic, const std::vector<ubyte>& payload,
-                       std::deque<std::string> topParts,
+                       std::deque<std::string>::const_iterator topPartsBegin,
+                       std::deque<std::string>::const_iterator topPartsEnd,
                        std::vector<Subscription*> subscriptions);
     void publishLeaf(Subscription* sub, std::string topic, const std::vector<ubyte>& payload);
     void useCache(bool u) { _useCache = u; }

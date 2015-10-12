@@ -101,10 +101,12 @@ void SubscriptionTree::removeSubscription(MqttSubscriber& subscriber,
 
 void SubscriptionTree::publish(std::string topic, std::deque<std::string> topParts,
                                const std::vector<ubyte>& payload) {
-    publish(topic, topParts, payload, _nodes);
+    publish(topic, topParts.cbegin(), topParts.cend(), payload, _nodes);
 }
 
-void SubscriptionTree::publish(std::string topic, std::deque<std::string> topParts,
+void SubscriptionTree::publish(std::string topic,
+                               std::deque<std::string>::const_iterator topPartsBegin,
+                               std::deque<std::string>::const_iterator topPartsEnd,
                                const std::vector<ubyte>& payload,
                                std::unordered_map<std::string, NodePtr>& nodes) {
     //check the cache first
@@ -113,29 +115,29 @@ void SubscriptionTree::publish(std::string topic, std::deque<std::string> topPar
         return;
     }
 
+    const auto size = (topPartsEnd - topPartsBegin);
     //not in the cache or not using the cache, do it the hard way
-    for(auto part: std::vector<std::string>{topParts[0], "#", "+"}) {
+    for(auto part: std::vector<std::string>{*topPartsBegin, "#", "+"}) {
         if(nodes.count(part)) {
-            if(topParts.size() == 1 && nodes[part]->branches.count("#")) {
+            if(size == 1 && nodes[part]->branches.count("#")) {
                 //So that "finance/#" matches finance
-                publishLeaves(topic, payload, topParts, nodes[part]->branches["#"]->leaves);
+                publishLeaves(topic, payload, topPartsBegin, topPartsEnd, nodes[part]->branches["#"]->leaves);
             }
-            publishLeaves(topic, payload, topParts, nodes[part]->leaves);
-            if(topParts.size() > 1) {
-                auto newTopParts = topParts;
-                newTopParts.pop_front();
-                publish(topic, newTopParts, payload, nodes[part]->branches);
+            publishLeaves(topic, payload, topPartsBegin, topPartsEnd, nodes[part]->leaves);
+            if(size > 1) {
+                publish(topic, topPartsBegin + 1, topPartsEnd, payload, nodes[part]->branches);
             }
         }
     }
 }
 
 void SubscriptionTree::publishLeaves(std::string topic, const std::vector<ubyte>& payload,
-                                     std::deque<std::string> topParts,
+                                     std::deque<std::string>::const_iterator topPartsBegin,
+                                     std::deque<std::string>::const_iterator topPartsEnd,
                                      std::vector<Subscription*> subscriptions) {
     for(auto sub: subscriptions) {
-        if(topParts.size() == 1 &&
-           equalOrPlus(sub->_part, topParts[0])) {
+        if((topPartsEnd - topPartsBegin) == 1 &&
+           equalOrPlus(sub->_part, *topPartsBegin)) {
             publishLeaf(sub, topic, payload);
         }
         else if(sub->_part == "#") {
@@ -221,7 +223,8 @@ void MqttBroker::publish(const std::string& topic, const std::vector<ubyte>& pay
     publish(topic, topParts, payload);
 }
 
-void MqttBroker::publish(std::string topic, std::deque<std::string> topParts,
+void MqttBroker::publish(std::string topic,
+                         std::deque<std::string> topParts,
                          const std::vector<ubyte>& payload) {
     _subscriptions.publish(topic, topParts, payload);
 }
