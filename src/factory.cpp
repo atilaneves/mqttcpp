@@ -31,22 +31,22 @@ std::unique_ptr<MqttMessage> MqttFactory::create(std::vector<ubyte> bytes) {
 
     switch(fixedHeader.type) {
     case MqttType::CONNECT:
-        return cereal.create<MqttConnect>(fixedHeader);
+        return cereal.createPtr<MqttConnect>(fixedHeader);
     case MqttType::CONNACK:
-        return cereal.create<MqttConnack>();
+        return cereal.createPtr<MqttConnack>();
     case MqttType::PUBLISH:
-        return cereal.create<MqttPublish>(fixedHeader);
+        return cereal.createPtr<MqttPublish>(fixedHeader);
     case MqttType::SUBSCRIBE:
         if(fixedHeader.qos != 1) {
             std::cerr << "SUBSCRIBE message with qos " << fixedHeader.qos <<  ", should be 1" << std::endl;
         }
-        return cereal.create<MqttSubscribe>(fixedHeader);
+        return cereal.createPtr<MqttSubscribe>(fixedHeader);
     case MqttType::SUBACK:
-        return cereal.create<MqttSuback>(fixedHeader);
+        return cereal.createPtr<MqttSuback>(fixedHeader);
     case MqttType::UNSUBSCRIBE:
-        return cereal.create<MqttUnsubscribe>(fixedHeader);
+        return cereal.createPtr<MqttUnsubscribe>(fixedHeader);
     case MqttType::UNSUBACK:
-        return cereal.create<MqttUnsuback>(fixedHeader);
+        return cereal.createPtr<MqttUnsuback>(fixedHeader);
     case MqttType::PINGREQ:
         return make_unique<MqttPingReq>();
     case MqttType::PINGRESP:
@@ -56,5 +56,58 @@ std::unique_ptr<MqttMessage> MqttFactory::create(std::vector<ubyte> bytes) {
     default:
         std::cerr << "Unknown MQTT message type: " << (int)fixedHeader.type << std::endl;
         return nullptr;
+    }
+}
+
+void MqttFactory::handleMessage(const std::vector<ubyte>& bytes, MqttServer& server, MqttConnection& connection) {
+    Decerealiser cereal(bytes.begin(), bytes.end());
+    auto fixedHeader = cereal.value<MqttFixedHeader>();
+
+    const auto mqttSize = fixedHeader.remaining + MqttFixedHeader::SIZE;
+    if(mqttSize != bytes.size()) {
+        std::cerr << "Malformed packet. Actual size: " << bytes.size() <<
+            ". Advertised size: " << mqttSize <<
+            " (r " << fixedHeader.remaining  << ")" << std::endl;
+        return;
+    }
+
+    cereal.reset(); //so the messages created below can re-read the header
+
+    switch(fixedHeader.type) {
+    case MqttType::CONNECT:
+        cereal.create<MqttConnect>(fixedHeader).handle(server, connection);
+        break;
+    case MqttType::CONNACK:
+        cereal.create<MqttConnack>().handle(server, connection);
+        break;
+    case MqttType::PUBLISH:
+        cereal.create<MqttPublish>(fixedHeader).handle(server, connection);
+        break;
+    case MqttType::SUBSCRIBE:
+        if(fixedHeader.qos != 1) {
+            std::cerr << "SUBSCRIBE message with qos " << fixedHeader.qos <<  ", should be 1" << std::endl;
+        }
+        cereal.create<MqttSubscribe>(fixedHeader).handle(server, connection);
+        break;
+    case MqttType::SUBACK:
+        cereal.create<MqttSuback>(fixedHeader).handle(server, connection);
+        break;
+    case MqttType::UNSUBSCRIBE:
+        cereal.create<MqttUnsubscribe>(fixedHeader).handle(server, connection);
+        break;
+    case MqttType::UNSUBACK:
+        cereal.create<MqttUnsuback>(fixedHeader).handle(server, connection);
+        break;
+    case MqttType::PINGREQ:
+        MqttPingReq().handle(server, connection);
+        break;
+    case MqttType::PINGRESP:
+        MqttPingResp().handle(server, connection);
+        break;
+    case MqttType::DISCONNECT:
+        MqttDisconnect().handle(server, connection);
+        break;
+    default:
+        std::cerr << "Unknown MQTT message type: " << (int)fixedHeader.type << std::endl;
     }
 }

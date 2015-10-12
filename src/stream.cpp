@@ -26,13 +26,7 @@ void MqttStream::read(MqttServer& server, MqttConnection& connection, const std:
     *this << bytes;
 
     while(hasMessages()) {
-        auto msg = createMessage();
-        if(!msg) {
-            std::cerr << "null message after createMessage() even though hasMessages() was true" << std::endl;
-        }
-        assert(msg);
-
-        msg->handle(server, connection);
+        handleMessage(server, connection);
     }
 }
 
@@ -77,6 +71,21 @@ std::unique_ptr<MqttMessage> MqttStream::createMessage() {
 
     return msg;
 }
+
+void MqttStream::handleMessage(MqttServer& server, MqttConnection& connection) {
+    if(!hasMessages()) return;
+
+    const auto msgSize = _remaining + MqttFixedHeader::SIZE;
+    const auto theSlice = slice();
+    _bytesStart += msgSize;
+    _bytes = std::vector<ubyte>(_buffer.cbegin() + _bytesStart, _buffer.cbegin() + _bytesRead);
+
+    MqttFactory::handleMessage(theSlice, server, connection);
+
+    _remaining = 0; //reset
+    updateRemaining();
+}
+
 
 std::vector<ubyte> MqttStream::slice() const {
     const auto msgSize = _remaining + MqttFixedHeader::SIZE;
