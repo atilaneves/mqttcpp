@@ -22,13 +22,6 @@ bool MqttStream::empty() const {
 }
 
 
-// template<typename I, typename T>
-// static void printVector(T vec) {
-//     std::cout << "[";
-//     for(const auto& b: vec) std::cout << static_cast<I>(b) << ", ";
-//     std::cout << "]" << std::endl;
-// }
-
 void MqttStream::read(MqttServer& server, MqttConnection& connection, const std::vector<ubyte>& bytes) {
     *this << bytes;
 
@@ -56,7 +49,6 @@ void MqttStream::operator<<(const std::vector<ubyte>& bytes) {
 
 void MqttStream::checkRealloc(ulong numBytes) {
     if(_bytesRead + numBytes > _buffer.size()) {
-        //std::cout << "Realloc!" << std::endl;
         copy(_bytes.cbegin(), _bytes.cend(), _buffer.begin());
         _bytesStart = 0;
         _bytesRead = _bytes.size();
