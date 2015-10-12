@@ -31,22 +31,22 @@ std::unique_ptr<MqttMessage> MqttFactory::create(std::vector<ubyte> bytes) {
 
     switch(fixedHeader.type) {
     case MqttType::CONNECT:
-        return cereal.create<MqttConnect>(fixedHeader);
+        return cereal.createPtr<MqttConnect>(fixedHeader);
     case MqttType::CONNACK:
-        return cereal.create<MqttConnack>();
+        return cereal.createPtr<MqttConnack>();
     case MqttType::PUBLISH:
-        return cereal.create<MqttPublish>(fixedHeader);
+        return cereal.createPtr<MqttPublish>(fixedHeader);
     case MqttType::SUBSCRIBE:
         if(fixedHeader.qos != 1) {
             std::cerr << "SUBSCRIBE message with qos " << fixedHeader.qos <<  ", should be 1" << std::endl;
         }
-        return cereal.create<MqttSubscribe>(fixedHeader);
+        return cereal.createPtr<MqttSubscribe>(fixedHeader);
     case MqttType::SUBACK:
-        return cereal.create<MqttSuback>(fixedHeader);
+        return cereal.createPtr<MqttSuback>(fixedHeader);
     case MqttType::UNSUBSCRIBE:
-        return cereal.create<MqttUnsubscribe>(fixedHeader);
+        return cereal.createPtr<MqttUnsubscribe>(fixedHeader);
     case MqttType::UNSUBACK:
-        return cereal.create<MqttUnsuback>(fixedHeader);
+        return cereal.createPtr<MqttUnsuback>(fixedHeader);
     case MqttType::PINGREQ:
         return make_unique<MqttPingReq>();
     case MqttType::PINGRESP:
