@@ -4,15 +4,16 @@
 #include <algorithm>
 
 template<typename T>
-std::vector<ubyte> encode(T msg) {
+std::vector<ubyte> encode(const T& msg) {
     Cerealiser cereal;
     cereal << msg;
     return cereal.getBytes();
 }
 
-
 void MqttConnection::newMessage(const std::string& topic, const std::vector<ubyte>& payload) {
-    write(encode(MqttPublish(topic, payload)));
+    Cerealiser cereal;
+    cereal << MqttPublish(topic, payload);
+    write(cereal.getBytes());
 }
 
 
