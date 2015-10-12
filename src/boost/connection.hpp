@@ -18,7 +18,7 @@ public:
 
     void start();
     void stop();
-    void writeBytes(std::vector<ubyte> bytes);
+    void writeBytes(const std::vector<ubyte>& bytes);
 
 protected:
 

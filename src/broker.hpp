@@ -11,7 +11,7 @@
 
 class MqttSubscriber {
 public:
-    virtual void newMessage(std::string topic, const std::vector<ubyte>& payload) = 0;
+    virtual void newMessage(const std::string& topic, const std::vector<ubyte>& payload) = 0;
 };
 
 
@@ -23,12 +23,12 @@ public:
     Subscription(MqttSubscriber& subscriber, MqttSubscribe::Topic topic,
                  std::deque<std::string> topicParts);
 
-    void newMessage(std::string topic, std::vector<ubyte> payload);
+    void newMessage(const std::string& topic, const std::vector<ubyte>& payload);
 
     bool isSubscriber(const MqttSubscriber& subscriber) const;
     bool isSubscription(const MqttSubscriber& subscriber,
                         std::vector<std::string> topics) const;
-    bool isTopic(std::vector<std::string> topics) const;
+    bool isTopic(const std::vector<std::string>& topics) const;
 
     ubyte qos() const { return _qos; }
 
@@ -66,14 +66,17 @@ public:
                             std::vector<std::string> topic,
                             std::unordered_map<std::string, NodePtr>& nodes);
     void publish(std::string topic, std::deque<std::string> topParts,
-                 std::vector<ubyte> payload);
-    void publish(std::string topic, std::deque<std::string> topParts,
-                 std::vector<ubyte> payload,
+                 const std::vector<ubyte>& payload);
+    void publish(std::string topic,
+                 std::deque<std::string>::const_iterator topPartsBegin,
+                 std::deque<std::string>::const_iterator topPartsEnd,
+                 const std::vector<ubyte>& payload,
                  std::unordered_map<std::string, NodePtr>& nodes);
-    void publishLeaves(std::string topic, std::vector<ubyte> payload,
-                       std::deque<std::string> topParts,
+    void publishLeaves(std::string topic, const std::vector<ubyte>& payload,
+                       std::deque<std::string>::const_iterator topPartsBegin,
+                       std::deque<std::string>::const_iterator topPartsEnd,
                        std::vector<Subscription*> subscriptions);
-    void publishLeaf(Subscription* sub, std::string topic, std::vector<ubyte> payload);
+    void publishLeaf(Subscription* sub, std::string topic, const std::vector<ubyte>& payload);
     void useCache(bool u) { _useCache = u; }
 
 private:
@@ -99,12 +102,14 @@ private:
 class MqttBroker {
 public:
 
+    using TopicParts = std::deque<std::string>;
+
     void subscribe(MqttSubscriber& subscriber, std::vector<std::string> topics);
     void subscribe(MqttSubscriber& subscriber, std::vector<MqttSubscribe::Topic> topics);
     void unsubscribe(MqttSubscriber& subscriber);
     void unsubscribe(MqttSubscriber& subscriber, std::vector<std::string> topics);
-    void publish(std::string topic, std::string payload);
-    void publish(std::string topic, std::vector<ubyte> payload);
+    void publish(const std::string& topic, const std::string& payload);
+    void publish(const std::string& topic, const std::vector<ubyte>& payload);
 
     void useCache(bool u) { _subscriptions.useCache(u); }
 
@@ -112,8 +117,9 @@ private:
 
     SubscriptionTree _subscriptions;
 
-    void publish(std::string topic, std::deque<std::string> topParts,
-                 std::vector<ubyte> payload);
+    void publish(const std::string& topic,
+                 const std::deque<std::string>& topParts,
+                 const std::vector<ubyte>& payload);
 };
 
 using NodePtr = SubscriptionTree::NodePtr;

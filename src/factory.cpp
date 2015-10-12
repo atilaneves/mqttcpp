@@ -58,3 +58,58 @@ std::unique_ptr<MqttMessage> MqttFactory::create(std::vector<ubyte> bytes) {
         return nullptr;
     }
 }
+
+void MqttFactory::handleMessage(std::vector<ubyte>::const_iterator begin, std::vector<ubyte>::const_iterator end,
+                                MqttServer& server, MqttConnection& connection) {
+
+    Decerealiser cereal(begin, end);
+    auto fixedHeader = cereal.value<MqttFixedHeader>();
+
+    const auto mqttSize = fixedHeader.remaining + MqttFixedHeader::SIZE;
+    if(mqttSize != (end - begin)) {
+        std::cerr << "Malformed packet. Actual size: " << (end - begin) <<
+            ". Advertised size: " << mqttSize <<
+            " (r " << fixedHeader.remaining  << ")" << std::endl;
+        return;
+    }
+
+    cereal.reset(); //so the messages created below can re-read the header
+
+    switch(fixedHeader.type) {
+    case MqttType::CONNECT:
+        cereal.create<MqttConnect>(fixedHeader).handle(server, connection);
+        break;
+    case MqttType::CONNACK:
+        cereal.create<MqttConnack>().handle(server, connection);
+        break;
+    case MqttType::PUBLISH:
+        cereal.create<MqttPublish>(fixedHeader).handle(server, connection);
+        break;
+    case MqttType::SUBSCRIBE:
+        if(fixedHeader.qos != 1) {
+            std::cerr << "SUBSCRIBE message with qos " << fixedHeader.qos <<  ", should be 1" << std::endl;
+        }
+        cereal.create<MqttSubscribe>(fixedHeader).handle(server, connection);
+        break;
+    case MqttType::SUBACK:
+        cereal.create<MqttSuback>(fixedHeader).handle(server, connection);
+        break;
+    case MqttType::UNSUBSCRIBE:
+        cereal.create<MqttUnsubscribe>(fixedHeader).handle(server, connection);
+        break;
+    case MqttType::UNSUBACK:
+        cereal.create<MqttUnsuback>(fixedHeader).handle(server, connection);
+        break;
+    case MqttType::PINGREQ:
+        MqttPingReq().handle(server, connection);
+        break;
+    case MqttType::PINGRESP:
+        MqttPingResp().handle(server, connection);
+        break;
+    case MqttType::DISCONNECT:
+        MqttDisconnect().handle(server, connection);
+        break;
+    default:
+        std::cerr << "Unknown MQTT message type: " << (int)fixedHeader.type << std::endl;
+    }
+}

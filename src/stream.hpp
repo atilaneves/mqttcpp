@@ -17,6 +17,7 @@ public:
     bool hasMessages() const;
     bool empty() const;
     std::unique_ptr<MqttMessage> createMessage();
+    void handleMessage(MqttServer& server, MqttConnection& connection);
 
 private:
 

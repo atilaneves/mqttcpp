@@ -4,15 +4,16 @@
 #include <algorithm>
 
 template<typename T>
-std::vector<ubyte> encode(T msg) {
+std::vector<ubyte> encode(const T& msg) {
     Cerealiser cereal;
     cereal << msg;
     return cereal.getBytes();
 }
 
-
-void MqttConnection::newMessage(std::string topic, const std::vector<ubyte>& payload) {
-    write(encode(MqttPublish(topic, payload)));
+void MqttConnection::newMessage(const std::string& topic, const std::vector<ubyte>& payload) {
+    Cerealiser cereal;
+    cereal << MqttPublish(topic, payload);
+    write(cereal.getBytes());
 }
 
 
@@ -62,12 +63,12 @@ void MqttServer::unsubscribe(MqttConnection& connection, ushort msgId,
     _broker.unsubscribe(connection, topics);
 }
 
-void MqttServer::publish(std::string topic, std::string payload) {
+void MqttServer::publish(const std::string& topic, const std::string& payload) {
     _broker.publish(topic, payload);
 }
 
 
-void MqttServer::publish(std::string topic, std::vector<ubyte> payload) {
+void MqttServer::publish(const std::string& topic, const std::vector<ubyte>& payload) {
     _broker.publish(topic, payload);
 }
 
