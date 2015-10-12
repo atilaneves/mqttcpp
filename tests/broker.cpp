@@ -3,7 +3,7 @@
 
 
 struct TestMqttSubscriber: public MqttSubscriber {
-    void newMessage(std::string topic, const std::vector<ubyte>& payload) override {
+    void newMessage(const std::string& topic, const std::vector<ubyte>& payload) override {
         (void)topic;
         std::string strPayload(payload.begin(), payload.end());
         messages.emplace_back(strPayload);
