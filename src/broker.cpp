@@ -122,8 +122,9 @@ void SubscriptionTree::publish(std::string topic, std::deque<std::string> topPar
             }
             publishLeaves(topic, payload, topParts, nodes[part]->leaves);
             if(topParts.size() > 1) {
-                topParts.pop_front();
-                publish(topic, topParts, payload, nodes[part]->branches);
+                auto newTopParts = topParts;
+                newTopParts.pop_front();
+                publish(topic, newTopParts, payload, nodes[part]->branches);
             }
         }
     }

@@ -99,6 +99,7 @@ void MqttConnect::handle(MqttServer& server, MqttConnection& connection) const {
 
 MqttConnack::MqttConnack():
     header(MqttType::CONNACK, false, 0, false, 2),
+    reserved(),
     code(Code::ACCEPTED) {
 }
 

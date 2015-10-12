@@ -96,7 +96,7 @@ public:
     };
 
     MqttConnack();
-    MqttConnack(Code c);
+    explicit MqttConnack(Code c);
 
     void cerealise(Cereal& cereal);
 
