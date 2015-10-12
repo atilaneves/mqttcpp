@@ -21,10 +21,10 @@ set(MY_FLAGS_DEBUG "${MY_COMMON_FLAGS} -g -pg -fno-inline")
 set(MY_FLAGS_RELEASE "${MY_COMMON_FLAGS} -O2 -flto")
 
 set(CMAKE_C_FLAGS_DEBUG ${MY_FLAGS_DEBUG})
-set(CMAKE_CXX_FLAGS_DEBUG "${MY_FLAGS_DEBUG} -std=c++11")
+set(CMAKE_CXX_FLAGS_DEBUG "${MY_FLAGS_DEBUG} -std=c++14")
 
 set(CMAKE_C_FLAGS_RELEASE ${MY_FLAGS_RELEASE})
-set(CMAKE_CXX_FLAGS_RELEASE "${MY_FLAGS_RELEASE} -std=c++11")
+set(CMAKE_CXX_FLAGS_RELEASE "${MY_FLAGS_RELEASE} -std=c++14")
 
 message("Build type is ${CMAKE_BUILD_TYPE}")
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
@@ -56,7 +56,9 @@ endif()
 
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=address")
+  if(MQTT_ASAN)
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=address")
+  endif()
   include_directories(unit-thread/lib)
   file(GLOB TEST_SRCS
     ${CMAKE_SOURCE_DIR}/tests/*.cpp
