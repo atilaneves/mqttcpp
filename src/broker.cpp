@@ -27,7 +27,7 @@ Subscription::Subscription(MqttSubscriber& subscriber, MqttSubscribe::Topic topi
     _qos(topic.qos) {
 }
 
-void Subscription::newMessage(std::string topic, std::vector<ubyte> payload) {
+void Subscription::newMessage(const std::string& topic, const std::vector<ubyte>& payload) {
     _subscriber.newMessage(topic, payload);
 }
 
@@ -40,7 +40,7 @@ bool Subscription::isSubscription(const MqttSubscriber& subscriber,
     return isSubscriber(subscriber) && isTopic(topics);
 }
 
-bool Subscription::isTopic(std::vector<std::string> topics) const {
+bool Subscription::isTopic(const std::vector<std::string>& topics) const {
     return std::find(topics.cbegin(), topics.cend(), _topic) != topics.cend();
 }
 
@@ -100,12 +100,12 @@ void SubscriptionTree::removeSubscription(MqttSubscriber& subscriber,
 
 
 void SubscriptionTree::publish(std::string topic, std::deque<std::string> topParts,
-                               std::vector<ubyte> payload) {
+                               const std::vector<ubyte>& payload) {
     publish(topic, topParts, payload, _nodes);
 }
 
 void SubscriptionTree::publish(std::string topic, std::deque<std::string> topParts,
-                               std::vector<ubyte> payload,
+                               const std::vector<ubyte>& payload,
                                std::unordered_map<std::string, NodePtr>& nodes) {
     //check the cache first
     if(_useCache && _cache.count(topic)) {
@@ -130,7 +130,7 @@ void SubscriptionTree::publish(std::string topic, std::deque<std::string> topPar
     }
 }
 
-void SubscriptionTree::publishLeaves(std::string topic, std::vector<ubyte> payload,
+void SubscriptionTree::publishLeaves(std::string topic, const std::vector<ubyte>& payload,
                                      std::deque<std::string> topParts,
                                      std::vector<Subscription*> subscriptions) {
     for(auto sub: subscriptions) {
@@ -144,7 +144,7 @@ void SubscriptionTree::publishLeaves(std::string topic, std::vector<ubyte> paylo
     }
 }
 
-void SubscriptionTree::publishLeaf(Subscription* sub, std::string topic, std::vector<ubyte> payload) {
+void SubscriptionTree::publishLeaf(Subscription* sub, std::string topic, const std::vector<ubyte>& payload) {
     sub->newMessage(topic, payload);
     if(_useCache) _cache[topic].push_back(sub);
 }
@@ -210,18 +210,18 @@ void MqttBroker::unsubscribe(MqttSubscriber& subscriber, std::vector<std::string
     _subscriptions.removeSubscription(subscriber, topics, _subscriptions._nodes);
 }
 
-void MqttBroker::publish(std::string topic, std::string payload) {
+void MqttBroker::publish(const std::string& topic, const std::string& payload) {
     std::vector<ubyte> realPayload(payload.begin(), payload.end());
     publish(topic, realPayload);
 }
 
-void MqttBroker::publish(std::string topic, std::vector<ubyte> payload) {
+void MqttBroker::publish(const std::string& topic, const std::vector<ubyte>& payload) {
     std::deque<std::string> topParts;
     boost::split(topParts, topic, boost::is_any_of("/"));
     publish(topic, topParts, payload);
 }
 
 void MqttBroker::publish(std::string topic, std::deque<std::string> topParts,
-                         std::vector<ubyte> payload) {
+                         const std::vector<ubyte>& payload) {
     _subscriptions.publish(topic, topParts, payload);
 }

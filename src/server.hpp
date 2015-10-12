@@ -10,7 +10,7 @@
 
 class MqttConnection: public MqttSubscriber {
 public:
-    virtual void newMessage(std::string topic, const std::vector<ubyte>& payload) override;
+    virtual void newMessage(const std::string& topic, const std::vector<ubyte>& payload) override;
     virtual void write(const std::vector<ubyte>& bytes) = 0;
     virtual void disconnect() = 0;
 };
