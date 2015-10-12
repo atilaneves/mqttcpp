@@ -59,13 +59,15 @@ std::unique_ptr<MqttMessage> MqttFactory::create(std::vector<ubyte> bytes) {
     }
 }
 
-void MqttFactory::handleMessage(const std::vector<ubyte>& bytes, MqttServer& server, MqttConnection& connection) {
-    Decerealiser cereal(bytes.begin(), bytes.end());
+void MqttFactory::handleMessage(std::vector<ubyte>::const_iterator begin, std::vector<ubyte>::const_iterator end,
+                                MqttServer& server, MqttConnection& connection) {
+
+    Decerealiser cereal(begin, end);
     auto fixedHeader = cereal.value<MqttFixedHeader>();
 
     const auto mqttSize = fixedHeader.remaining + MqttFixedHeader::SIZE;
-    if(mqttSize != bytes.size()) {
-        std::cerr << "Malformed packet. Actual size: " << bytes.size() <<
+    if(mqttSize != (end - begin)) {
+        std::cerr << "Malformed packet. Actual size: " << (end - begin) <<
             ". Advertised size: " << mqttSize <<
             " (r " << fixedHeader.remaining  << ")" << std::endl;
         return;

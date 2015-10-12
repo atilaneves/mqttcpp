@@ -9,7 +9,8 @@
 class MqttFactory {
 public:
     static std::unique_ptr<MqttMessage> create(std::vector<ubyte> bytes);
-    static void handleMessage(const std::vector<ubyte>& bytes, MqttServer& server, MqttConnection& connection);
+    static void handleMessage(std::vector<ubyte>::const_iterator begin, std::vector<ubyte>::const_iterator end,
+                              MqttServer& server, MqttConnection& connection);
 };
 
 

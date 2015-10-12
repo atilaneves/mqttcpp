@@ -76,11 +76,12 @@ void MqttStream::handleMessage(MqttServer& server, MqttConnection& connection) {
     if(!hasMessages()) return;
 
     const auto msgSize = _remaining + MqttFixedHeader::SIZE;
-    const auto theSlice = slice();
     _bytesStart += msgSize;
+    auto begin = _bytes.cbegin();
+    auto end = _bytes.cbegin() + msgSize;
+    MqttFactory::handleMessage(begin, end, server, connection);
     _bytes = std::vector<ubyte>(_buffer.cbegin() + _bytesStart, _buffer.cbegin() + _bytesRead);
 
-    MqttFactory::handleMessage(theSlice, server, connection);
 
     _remaining = 0; //reset
     updateRemaining();
