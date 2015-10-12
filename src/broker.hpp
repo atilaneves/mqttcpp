@@ -102,6 +102,8 @@ private:
 class MqttBroker {
 public:
 
+    using TopicParts = std::deque<std::string>;
+
     void subscribe(MqttSubscriber& subscriber, std::vector<std::string> topics);
     void subscribe(MqttSubscriber& subscriber, std::vector<MqttSubscribe::Topic> topics);
     void unsubscribe(MqttSubscriber& subscriber);
@@ -115,7 +117,8 @@ private:
 
     SubscriptionTree _subscriptions;
 
-    void publish(std::string topic, std::deque<std::string> topParts,
+    void publish(const std::string& topic,
+                 const std::deque<std::string>& topParts,
                  const std::vector<ubyte>& payload);
 };
 

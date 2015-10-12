@@ -62,12 +62,12 @@ void MqttServer::unsubscribe(MqttConnection& connection, ushort msgId,
     _broker.unsubscribe(connection, topics);
 }
 
-void MqttServer::publish(std::string topic, std::string payload) {
+void MqttServer::publish(const std::string& topic, const std::string& payload) {
     _broker.publish(topic, payload);
 }
 
 
-void MqttServer::publish(std::string topic, std::vector<ubyte> payload) {
+void MqttServer::publish(const std::string& topic, const std::vector<ubyte>& payload) {
     _broker.publish(topic, payload);
 }
 

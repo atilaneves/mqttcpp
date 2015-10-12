@@ -28,8 +28,8 @@ public:
     void unsubscribe(MqttConnection& connection);
     void unsubscribe(MqttConnection& connection, ushort msgId,
                      std::vector<std::string> topics);
-    void publish(std::string topic, std::string payload);
-    void publish(std::string topic, std::vector<ubyte> payload);
+    void publish(const std::string& topic, const std::string& payload);
+    void publish(const std::string& topic, const std::vector<ubyte>& payload);
     void ping(MqttConnection& connection);
     void useCache(bool u) { _broker.useCache(u); }
 

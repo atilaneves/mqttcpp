@@ -223,8 +223,8 @@ void MqttBroker::publish(const std::string& topic, const std::vector<ubyte>& pay
     publish(topic, topParts, payload);
 }
 
-void MqttBroker::publish(std::string topic,
-                         std::deque<std::string> topParts,
+void MqttBroker::publish(const std::string& topic,
+                         const std::deque<std::string>& topParts,
                          const std::vector<ubyte>& payload) {
     _subscriptions.publish(topic, topParts, payload);
 }
