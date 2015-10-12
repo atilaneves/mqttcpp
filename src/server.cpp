@@ -11,7 +11,7 @@ std::vector<ubyte> encode(T msg) {
 }
 
 
-void MqttConnection::newMessage(std::string topic, std::vector<ubyte> payload) {
+void MqttConnection::newMessage(std::string topic, const std::vector<ubyte>& payload) {
     write(encode(MqttPublish(topic, payload)));
 }
 

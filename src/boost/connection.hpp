@@ -31,7 +31,7 @@ private:
     std::array<unsigned char, 16384> _buffer;
 
     void doRead();
-    virtual void handleRead(std::vector<ubyte> bytes) = 0;
+    virtual void handleRead(const std::vector<ubyte>& bytes) = 0;
 };
 
 typedef std::shared_ptr<Connection> ConnectionPtr;

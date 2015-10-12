@@ -17,7 +17,7 @@ if(NOT CMAKE_BUILD_TYPE)
 endif(NOT CMAKE_BUILD_TYPE)
 
 set(MY_COMMON_FLAGS "-Wall -Wextra -Werror")
-set(MY_FLAGS_DEBUG "${MY_COMMON_FLAGS} -g -pg -fno-inline")
+set(MY_FLAGS_DEBUG "${MY_COMMON_FLAGS} -g -fno-inline")
 set(MY_FLAGS_RELEASE "${MY_COMMON_FLAGS} -O2 -flto")
 
 set(CMAKE_C_FLAGS_DEBUG ${MY_FLAGS_DEBUG})

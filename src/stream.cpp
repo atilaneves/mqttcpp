@@ -29,7 +29,7 @@ bool MqttStream::empty() const {
 //     std::cout << "]" << std::endl;
 // }
 
-void MqttStream::read(MqttServer& server, MqttConnection& connection, std::vector<ubyte> bytes) {
+void MqttStream::read(MqttServer& server, MqttConnection& connection, const std::vector<ubyte>& bytes) {
     *this << bytes;
 
     while(hasMessages()) {
@@ -43,7 +43,7 @@ void MqttStream::read(MqttServer& server, MqttConnection& connection, std::vecto
     }
 }
 
-void MqttStream::operator<<(std::vector<ubyte> bytes) {
+void MqttStream::operator<<(const std::vector<ubyte>& bytes) {
     checkRealloc(bytes.size());
     const auto end = _bytesRead + bytes.size();
 

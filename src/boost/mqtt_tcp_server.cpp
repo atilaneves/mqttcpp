@@ -40,7 +40,7 @@ public:
     MqttTcpConnection(const MqttTcpConnection&) = delete;
     MqttTcpConnection& operator=(const MqttTcpConnection&) = delete;
 
-    enum { BUFFER_SIZE = 16384 };
+    enum { BUFFER_SIZE = 16384 * 2};
     explicit MqttTcpConnection(boost::asio::ip::tcp::socket socket,
                                ConnectionManager& manager,
                                MqttServer& server):
@@ -51,11 +51,11 @@ public:
 
     }
 
-    virtual void handleRead(std::vector<ubyte> bytes) override {
+    virtual void handleRead(const std::vector<ubyte>& bytes) override {
         if(_connected) _stream.read(_mqttServer, *this, bytes);
     }
 
-    virtual void write(std::vector<ubyte> bytes) override {
+    virtual void write(const std::vector<ubyte>& bytes) override {
         if(_connected) writeBytes(bytes);
     }
 

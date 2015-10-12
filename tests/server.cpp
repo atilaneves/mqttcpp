@@ -13,11 +13,11 @@ struct TestMqttConnection: public MqttConnection {
         connected(true), connect(std::move(c)) {
     }
 
-    void write(std::vector<ubyte> bytes) override {
+    void write(const std::vector<ubyte>& bytes) override {
         lastMsg = MqttFactory::create(bytes);
     }
 
-    void newMessage(std::string topic, std::vector<ubyte> payload) override {
+    void newMessage(std::string topic, const std::vector<ubyte>& payload) override {
         (void)topic;
         payloads.emplace_back(payload.begin(), payload.end());
     }

@@ -11,7 +11,7 @@
 
 class MqttSubscriber {
 public:
-    virtual void newMessage(std::string topic, std::vector<ubyte> payload) = 0;
+    virtual void newMessage(std::string topic, const std::vector<ubyte>& payload) = 0;
 };
 
 
