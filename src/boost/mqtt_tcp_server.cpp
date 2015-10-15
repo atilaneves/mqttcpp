@@ -40,7 +40,7 @@ public:
     MqttTcpConnection(const MqttTcpConnection&) = delete;
     MqttTcpConnection& operator=(const MqttTcpConnection&) = delete;
 
-    enum { BUFFER_SIZE = 16384 * 2};
+    enum { BUFFER_SIZE = 1024 * 128};
     explicit MqttTcpConnection(boost::asio::ip::tcp::socket socket,
                                ConnectionManager& manager,
                                MqttServer& server):

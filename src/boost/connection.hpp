@@ -7,6 +7,25 @@
 
 class ConnectionManager;
 
+
+using ConnectionBytes = std::array<unsigned char, 1024 * 64>;
+using ConnectionIterator = ConnectionBytes::const_iterator;
+
+class BytesRange {
+public:
+
+    using const_iterator = ConnectionIterator;
+
+    ConnectionIterator begin() const { return _begin; }
+    ConnectionIterator end() const { return _end; }
+
+private:
+
+    ConnectionIterator _begin;
+    ConnectionIterator _end;
+};
+
+
 class Connection : public std::enable_shared_from_this<Connection> {
 public:
 
@@ -28,7 +47,7 @@ private:
 
     boost::asio::ip::tcp::socket _socket;
     ConnectionManager& _connectionManager;
-    std::array<unsigned char, 16384> _buffer;
+    ConnectionBytes _buffer;
 
     void doRead();
     virtual void handleRead(const std::vector<ubyte>& bytes) = 0;

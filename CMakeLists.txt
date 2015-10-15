@@ -59,6 +59,10 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
   if(MQTT_ASAN)
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=address")
   endif()
+  if(MQTT_PROFILE)
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -pg")
+  endif()
+
   include_directories(unit-thread/lib)
   file(GLOB TEST_SRCS
     ${CMAKE_SOURCE_DIR}/tests/*.cpp
