@@ -20,7 +20,7 @@ bool equalOrPlus(const std::string& pat, const std::string& top) {
 
 
 Subscription::Subscription(MqttSubscriber& subscriber, MqttSubscribe::Topic topic,
-                           std::deque<std::string> topicParts):
+                           TopicParts topicParts):
     _subscriber(subscriber),
     _part(std::move(topicParts.back())),
     _topic(std::move(topic.topic)),
@@ -48,7 +48,7 @@ SubscriptionTree::SubscriptionTree():
     _useCache(false) {
 }
 
-void SubscriptionTree::addSubscription(Subscription* s, std::deque<std::string> parts) {
+void SubscriptionTree::addSubscription(Subscription* s, const TopicParts& parts) {
     assert(parts.size());
     clearCache();
     addSubscriptionImpl(s, parts, nullptr, _nodes);
@@ -99,14 +99,14 @@ void SubscriptionTree::removeSubscription(MqttSubscriber& subscriber,
 }
 
 
-void SubscriptionTree::publish(std::string topic, std::deque<std::string> topParts,
+void SubscriptionTree::publish(std::string topic, TopicParts topParts,
                                const std::vector<ubyte>& payload) {
     publish(topic, topParts.cbegin(), topParts.cend(), payload, _nodes);
 }
 
 void SubscriptionTree::publish(std::string topic,
-                               std::deque<std::string>::const_iterator topPartsBegin,
-                               std::deque<std::string>::const_iterator topPartsEnd,
+                               TopicParts::const_iterator topPartsBegin,
+                               TopicParts::const_iterator topPartsEnd,
                                const std::vector<ubyte>& payload,
                                std::unordered_map<std::string, NodePtr>& nodes) {
     //check the cache first
@@ -132,8 +132,8 @@ void SubscriptionTree::publish(std::string topic,
 }
 
 void SubscriptionTree::publishLeaves(std::string topic, const std::vector<ubyte>& payload,
-                                     std::deque<std::string>::const_iterator topPartsBegin,
-                                     std::deque<std::string>::const_iterator topPartsEnd,
+                                     TopicParts::const_iterator topPartsBegin,
+                                     TopicParts::const_iterator topPartsEnd,
                                      std::vector<Subscription*> subscriptions) {
     for(auto sub: subscriptions) {
         if((topPartsEnd - topPartsBegin) == 1 &&
@@ -153,7 +153,7 @@ void SubscriptionTree::publishLeaf(Subscription* sub, std::string topic, const s
 
 
 void SubscriptionTree::addSubscriptionImpl(Subscription* s,
-                                           std::deque<std::string> parts,
+                                           TopicParts parts,
                                            NodePtr parent,
                                            std::unordered_map<std::string, NodePtr>& nodes) {
     auto part = parts.front();
@@ -198,7 +198,7 @@ void MqttBroker::subscribe(MqttSubscriber& subscriber, std::vector<std::string> 
 
 void MqttBroker::subscribe(MqttSubscriber& subscriber, std::vector<MqttSubscribe::Topic> topics) {
     for(const auto& t: topics) {
-        std::deque<std::string> parts;
+        TopicParts parts;
         boost::split(parts, t.topic, boost::is_any_of("/"));
         _subscriptions.addSubscription(new Subscription(subscriber, t, parts), parts);
     }
@@ -218,13 +218,13 @@ void MqttBroker::publish(const std::string& topic, const std::string& payload) {
 }
 
 void MqttBroker::publish(const std::string& topic, const std::vector<ubyte>& payload) {
-    std::deque<std::string> topParts;
+    TopicParts topParts;
     boost::split(topParts, topic, boost::is_any_of("/"));
     publish(topic, topParts, payload);
 }
 
 void MqttBroker::publish(const std::string& topic,
-                         const std::deque<std::string>& topParts,
+                         const TopicParts& topParts,
                          const std::vector<ubyte>& payload) {
     _subscriptions.publish(topic, topParts, payload);
 }

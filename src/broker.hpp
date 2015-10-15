@@ -14,6 +14,7 @@ public:
     virtual void newMessage(const std::string& topic, const std::vector<ubyte>& payload) = 0;
 };
 
+using TopicParts = std::deque<std::string>;
 
 class Subscription {
 public:
@@ -21,7 +22,7 @@ public:
     friend class SubscriptionTree;
 
     Subscription(MqttSubscriber& subscriber, MqttSubscribe::Topic topic,
-                 std::deque<std::string> topicParts);
+                 TopicParts topicParts);
 
     void newMessage(const std::string& topic, const std::vector<ubyte>& payload);
 
@@ -59,22 +60,22 @@ public:
 
     SubscriptionTree();
 
-    void addSubscription(Subscription* s, std::deque<std::string> parts);
+    void addSubscription(Subscription* s, const TopicParts& parts);
     void removeSubscription(MqttSubscriber& subscriber,
                             std::unordered_map<std::string, NodePtr>& nodes);
     void removeSubscription(MqttSubscriber& subscriber,
                             std::vector<std::string> topic,
                             std::unordered_map<std::string, NodePtr>& nodes);
-    void publish(std::string topic, std::deque<std::string> topParts,
+    void publish(std::string topic, TopicParts topParts,
                  const std::vector<ubyte>& payload);
     void publish(std::string topic,
-                 std::deque<std::string>::const_iterator topPartsBegin,
-                 std::deque<std::string>::const_iterator topPartsEnd,
+                 TopicParts::const_iterator topPartsBegin,
+                 TopicParts::const_iterator topPartsEnd,
                  const std::vector<ubyte>& payload,
                  std::unordered_map<std::string, NodePtr>& nodes);
     void publishLeaves(std::string topic, const std::vector<ubyte>& payload,
-                       std::deque<std::string>::const_iterator topPartsBegin,
-                       std::deque<std::string>::const_iterator topPartsEnd,
+                       TopicParts::const_iterator topPartsBegin,
+                       TopicParts::const_iterator topPartsEnd,
                        std::vector<Subscription*> subscriptions);
     void publishLeaf(Subscription* sub, std::string topic, const std::vector<ubyte>& payload);
     void useCache(bool u) { _useCache = u; }
@@ -87,7 +88,7 @@ private:
     friend class MqttBroker;
 
     void addSubscriptionImpl(Subscription* s,
-                             std::deque<std::string> parts,
+                             TopicParts parts,
                              NodePtr parent,
                              std::unordered_map<std::string, NodePtr>& nodes);
     NodePtr addOrFindNode(std::string part, NodePtr parent,
@@ -101,8 +102,6 @@ private:
 
 class MqttBroker {
 public:
-
-    using TopicParts = std::deque<std::string>;
 
     void subscribe(MqttSubscriber& subscriber, std::vector<std::string> topics);
     void subscribe(MqttSubscriber& subscriber, std::vector<MqttSubscribe::Topic> topics);
@@ -118,7 +117,7 @@ private:
     SubscriptionTree _subscriptions;
 
     void publish(const std::string& topic,
-                 const std::deque<std::string>& topParts,
+                 const TopicParts& topParts,
                  const std::vector<ubyte>& payload);
 };
 
