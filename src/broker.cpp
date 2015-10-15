@@ -172,7 +172,7 @@ auto SubscriptionTree::addOrFindNode(std::string part, NodePtr parent,
     if(nodes.count(part) && part == nodes[part]->part) {
         return nodes[part];
     }
-    auto node = std::make_shared<Node>(part, parent);
+    auto node = new Node(part, parent);
     nodes[part] = node;
     return node;
 }

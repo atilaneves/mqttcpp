@@ -45,7 +45,7 @@ class SubscriptionTree {
 private:
 
     struct Node {
-        using NodePtr = std::shared_ptr<Node>;
+        using NodePtr = Node*;
         Node(std::string pt, NodePtr pr):part(pt), parent(pr) {}
         ~Node() { for(auto l: leaves) delete l; }
         std::string part;
