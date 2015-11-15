@@ -34,7 +34,7 @@ public:
     void useCache(bool u) { _broker.useCache(u); }
 
 private:
-    MqttBroker _broker;
+    OldMqttBroker _broker;
 };
 
 

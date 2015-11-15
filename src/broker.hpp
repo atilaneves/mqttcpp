@@ -80,12 +80,10 @@ public:
     void publishLeaf(Subscription* sub, std::string topic, const std::vector<ubyte>& payload);
     void useCache(bool u) { _useCache = u; }
 
-private:
-
     bool _useCache;
     std::unordered_map<std::string, std::vector<Subscription*>> _cache;
     std::unordered_map<std::string, NodePtr> _nodes;
-    friend class MqttBroker;
+    friend class OldMqttBroker;
 
     void addSubscriptionImpl(Subscription* s,
                              TopicParts parts,
@@ -100,7 +98,7 @@ private:
 
 
 
-class MqttBroker {
+class OldMqttBroker {
 public:
 
     void subscribe(MqttSubscriber& subscriber, std::vector<std::string> topics);
@@ -122,5 +120,20 @@ private:
 };
 
 using NodePtr = SubscriptionTree::NodePtr;
+
+
+template<typename S>
+class MqttBroker {
+public:
+
+    MqttBroker(bool useCache):
+        _useCache{useCache}
+    {
+    }
+
+private:
+
+    bool _useCache;
+};
 
 #endif // BROKER_H_

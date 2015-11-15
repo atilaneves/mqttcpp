@@ -10,10 +10,15 @@ using namespace gsl;
 struct TestMqttSubscriber {
     using Payload = vector<ubyte>;
 
-    void newMessage(span<ubyte>) {
+    void newMessage(span<ubyte> bytes) {
+        messages.emplace_back(bytes);
     }
+
+    vector<Payload> messages;
 };
 
 TEST_CASE("foo") {
-    REQUIRE(3 == 4);
+    for(const auto useCache: {false, true}) {
+        MqttBroker<TestMqttSubscriber> broker{useCache};
+    }
 }
