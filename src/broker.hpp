@@ -136,7 +136,7 @@ public:
     {
     }
 
-    void publish(gsl::cstring_span<> topic, const gsl::span<ubyte> bytes) {
+    void publish(const gsl::cstring_span<> topic, const gsl::span<ubyte> bytes) {
         std::deque<std::string> pubParts;
         const auto topicStr = gsl::to_string(topic);
         boost::split(pubParts, topicStr, boost::is_any_of("/"));

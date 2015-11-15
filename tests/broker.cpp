@@ -13,7 +13,6 @@ using Payload = vector<ubyte>;
 struct TestMqttSubscriber {
 
     void newMessage(span<ubyte> bytes) {
-        cout << "newMessage of size " << bytes.size() << endl;
         messages.emplace_back(bytes.begin(), bytes.end());
         assert(messages.size() != 0);
         assert((long)messages[messages.size() - 1].size() == bytes.size());
