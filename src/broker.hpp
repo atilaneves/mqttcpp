@@ -8,6 +8,7 @@
 #include <string>
 #include <unordered_map>
 #include <memory>
+#include <boost/algorithm/string.hpp>
 
 class MqttSubscriber {
 public:
@@ -16,12 +17,12 @@ public:
 
 using TopicParts = std::deque<std::string>;
 
-class Subscription {
+class OldSubscription {
 public:
 
     friend class SubscriptionTree;
 
-    Subscription(MqttSubscriber& subscriber, MqttSubscribe::Topic topic,
+    OldSubscription(MqttSubscriber& subscriber, MqttSubscribe::Topic topic,
                  TopicParts topicParts);
 
     void newMessage(const std::string& topic, const std::vector<ubyte>& payload);
@@ -51,7 +52,7 @@ private:
         std::string part;
         NodePtr parent;
         std::unordered_map<std::string, NodePtr> branches;
-        std::vector<Subscription*> leaves;
+        std::vector<OldSubscription*> leaves;
     };
 
 public:
@@ -60,7 +61,7 @@ public:
 
     SubscriptionTree();
 
-    void addSubscription(Subscription* s, const TopicParts& parts);
+    void addSubscription(OldSubscription* s, const TopicParts& parts);
     void removeSubscription(MqttSubscriber& subscriber,
                             std::unordered_map<std::string, NodePtr>& nodes);
     void removeSubscription(MqttSubscriber& subscriber,
@@ -76,16 +77,16 @@ public:
     void publishLeaves(std::string topic, const std::vector<ubyte>& payload,
                        TopicParts::const_iterator topPartsBegin,
                        TopicParts::const_iterator topPartsEnd,
-                       std::vector<Subscription*> subscriptions);
-    void publishLeaf(Subscription* sub, std::string topic, const std::vector<ubyte>& payload);
+                       std::vector<OldSubscription*> subscriptions);
+    void publishLeaf(OldSubscription* sub, std::string topic, const std::vector<ubyte>& payload);
     void useCache(bool u) { _useCache = u; }
 
     bool _useCache;
-    std::unordered_map<std::string, std::vector<Subscription*>> _cache;
+    std::unordered_map<std::string, std::vector<OldSubscription*>> _cache;
     std::unordered_map<std::string, NodePtr> _nodes;
     friend class OldMqttBroker;
 
-    void addSubscriptionImpl(Subscription* s,
+    void addSubscriptionImpl(OldSubscription* s,
                              TopicParts parts,
                              NodePtr parent,
                              std::unordered_map<std::string, NodePtr>& nodes);
@@ -123,6 +124,9 @@ using NodePtr = SubscriptionTree::NodePtr;
 
 #include "string_span.h"
 
+template<typename S> class Subscription;
+
+
 template<typename S>
 class MqttBroker {
 public:
@@ -138,13 +142,51 @@ public:
     }
 
     void subscribe(S& subscriber, std::vector<std::string> topics) {
-        (void)subscriber;
-        (void)topics;
+        invalidateCache();
+        for(const auto& topic: topics) {
+            std::deque<std::string> subParts;
+            boost::split(subParts, topic, boost::is_any_of("/"));
+            auto node = addOrFindNode(_tree, subParts);
+            node.leaves.emplace_back(Subscription<S>{subscriber, topic});
+        }
     }
 
 private:
 
+    struct Node {
+        std::unordered_map<std::string, Node*> children;
+        std::vector<Subscription<S>> leaves;
+    };
+
     bool _useCache;
+    std::unordered_map<std::string, S&> _cache;
+    Node _tree;
+
+    void invalidateCache() {
+        if(_useCache) _cache.clear();
+    }
+
+    static Node& addOrFindNode(Node& tree, std::deque<std::string>& parts) {
+        if(parts.size() == 0) return tree;
+
+        const auto& part = parts[0];
+        //create if not already here
+        if(tree.children.find(part) == tree.children.end()) {
+            tree.children[part] = new Node{};
+        }
+
+        parts.pop_front();
+        return addOrFindNode(tree, parts);
+    }
 };
+
+template<typename S>
+class Subscription {
+public:
+
+    Subscription(S&, const std::string&) {
+    }
+};
+
 
 #endif // BROKER_H_

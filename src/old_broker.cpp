@@ -19,28 +19,28 @@ bool equalOrPlus(const std::string& pat, const std::string& top) {
 } //anonymous namespace
 
 
-Subscription::Subscription(MqttSubscriber& subscriber, MqttSubscribe::Topic topic,
-                           TopicParts topicParts):
+OldSubscription::OldSubscription(MqttSubscriber& subscriber, MqttSubscribe::Topic topic,
+                                 TopicParts topicParts):
     _subscriber(subscriber),
     _part(std::move(topicParts.back())),
     _topic(std::move(topic.topic)),
     _qos(topic.qos) {
 }
 
-void Subscription::newMessage(const std::string& topic, const std::vector<ubyte>& payload) {
+void OldSubscription::newMessage(const std::string& topic, const std::vector<ubyte>& payload) {
     _subscriber.newMessage(topic, payload);
 }
 
-bool Subscription::isSubscriber(const MqttSubscriber& subscriber) const {
+bool OldSubscription::isSubscriber(const MqttSubscriber& subscriber) const {
     return &_subscriber == &subscriber;
 }
 
-bool Subscription::isSubscription(const MqttSubscriber& subscriber,
+bool OldSubscription::isSubscription(const MqttSubscriber& subscriber,
                                   std::vector<std::string> topics) const {
     return isSubscriber(subscriber) && isTopic(topics);
 }
 
-bool Subscription::isTopic(const std::vector<std::string>& topics) const {
+bool OldSubscription::isTopic(const std::vector<std::string>& topics) const {
     return std::find(topics.cbegin(), topics.cend(), _topic) != topics.cend();
 }
 
@@ -48,7 +48,7 @@ SubscriptionTree::SubscriptionTree():
     _useCache(false) {
 }
 
-void SubscriptionTree::addSubscription(Subscription* s, const TopicParts& parts) {
+void SubscriptionTree::addSubscription(OldSubscription* s, const TopicParts& parts) {
     assert(parts.size());
     clearCache();
     addSubscriptionImpl(s, parts, nullptr, _nodes);
@@ -70,7 +70,7 @@ void SubscriptionTree::removeSubscription(MqttSubscriber& subscriber,
     std::unordered_map<std::string, NodePtr> newNodes = nodes;
     for(auto n: newNodes) {
         if(n.second->leaves.size()) {
-            removeIf(n.second->leaves, [&subscriber](Subscription* l) { return l->isSubscriber(subscriber); });
+            removeIf(n.second->leaves, [&subscriber](OldSubscription* l) { return l->isSubscriber(subscriber); });
             if(!n.second->leaves.size() && !n.second->branches.size()) {
                 removeNode(n.second->parent, n.second);
             }
@@ -87,7 +87,7 @@ void SubscriptionTree::removeSubscription(MqttSubscriber& subscriber,
     std::unordered_map<std::string, NodePtr> newNodes = nodes;
     for(auto n: newNodes) {
         if(n.second->leaves.size()) {
-            removeIf(n.second->leaves, [&subscriber, &topics](Subscription* l) {
+            removeIf(n.second->leaves, [&subscriber, &topics](OldSubscription* l) {
                     return l->isSubscription(subscriber, topics); });
             if(!n.second->leaves.size() && !n.second->branches.size()) {
                 removeNode(n.second->parent, n.second);
@@ -134,7 +134,7 @@ void SubscriptionTree::publish(std::string topic,
 void SubscriptionTree::publishLeaves(std::string topic, const std::vector<ubyte>& payload,
                                      TopicParts::const_iterator topPartsBegin,
                                      TopicParts::const_iterator topPartsEnd,
-                                     std::vector<Subscription*> subscriptions) {
+                                     std::vector<OldSubscription*> subscriptions) {
     for(auto sub: subscriptions) {
         if((topPartsEnd - topPartsBegin) == 1 &&
            equalOrPlus(sub->_part, *topPartsBegin)) {
@@ -146,13 +146,13 @@ void SubscriptionTree::publishLeaves(std::string topic, const std::vector<ubyte>
     }
 }
 
-void SubscriptionTree::publishLeaf(Subscription* sub, std::string topic, const std::vector<ubyte>& payload) {
+void SubscriptionTree::publishLeaf(OldSubscription* sub, std::string topic, const std::vector<ubyte>& payload) {
     sub->newMessage(topic, payload);
     if(_useCache) _cache[topic].push_back(sub);
 }
 
 
-void SubscriptionTree::addSubscriptionImpl(Subscription* s,
+void SubscriptionTree::addSubscriptionImpl(OldSubscription* s,
                                            TopicParts parts,
                                            NodePtr parent,
                                            std::unordered_map<std::string, NodePtr>& nodes) {
@@ -200,7 +200,7 @@ void OldMqttBroker::subscribe(MqttSubscriber& subscriber, std::vector<MqttSubscr
     for(const auto& t: topics) {
         TopicParts parts;
         boost::split(parts, t.topic, boost::is_any_of("/"));
-        _subscriptions.addSubscription(new Subscription(subscriber, t, parts), parts);
+        _subscriptions.addSubscription(new OldSubscription(subscriber, t, parts), parts);
     }
 }
 
