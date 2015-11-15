@@ -8,6 +8,7 @@
 #include <string>
 #include <unordered_map>
 #include <memory>
+#include <iostream>
 #include <boost/algorithm/string.hpp>
 
 class MqttSubscriber {
@@ -120,7 +121,6 @@ private:
                  const std::vector<ubyte>& payload);
 };
 
-using NodePtr = SubscriptionTree::NodePtr;
 
 #include "string_span.h"
 
@@ -136,7 +136,7 @@ public:
     {
     }
 
-    void publish(gsl::cstring_span<> topic, gsl::span<ubyte> bytes) {
+    void publish(gsl::cstring_span<> topic, const gsl::span<ubyte> bytes) {
         std::deque<std::string> pubParts;
         const auto topicStr = gsl::to_string(topic);
         boost::split(pubParts, topicStr, boost::is_any_of("/"));
@@ -155,7 +155,7 @@ public:
         for(const auto& topic: topics) {
             std::deque<std::string> subParts;
             boost::split(subParts, topic.topic, boost::is_any_of("/"));
-            auto node = addOrFindNode(_tree, subParts);
+            auto& node = addOrFindNode(_tree, subParts);
             node.leaves.emplace_back(Subscription<S>{subscriber, topic.topic});
         }
     }
@@ -183,17 +183,17 @@ private:
     static Node& addOrFindNode(Node& tree, std::deque<std::string>& parts) {
         if(parts.size() == 0) return tree;
 
-        const auto& part = parts[0];
+        const auto part = parts[0]; //copying is good here
         //create if not already here
         if(tree.children.find(part) == tree.children.end()) {
-            tree.children.emplace(part, std::make_shared<Node>());
+            tree.children[part] = std::make_shared<Node>();
         }
 
         parts.pop_front();
-        return addOrFindNode(tree, parts);
+        return addOrFindNode(*tree.children[part], parts);
     }
 
-    void publishImpl(Node& tree, std::deque<std::string>& pubParts, const std::string& topic, gsl::span<ubyte> bytes) {
+    void publishImpl(Node& tree, std::deque<std::string>& pubParts, const std::string& topic, const gsl::span<ubyte> bytes) {
 
         if(_useCache && _cache.find(topic) != _cache.end()) {
             for(auto subscriber: _cache[topic]) subscriber->newMessage(bytes);
@@ -202,12 +202,13 @@ private:
 
         if(pubParts.size() == 0) return;
 
-        const auto front = pubParts[0];
+
+        const std::string front = pubParts[0];
         pubParts.pop_front();
 
         for(const auto& part: std::vector<std::string>{front, "#", "+"}) {
             if(tree.children.find(part) != tree.children.end()) {
-                auto& node = *tree.children[part];
+                Node& node = *tree.children[part];
                 if(pubParts.size() == 0 || part == "#") publishNode(node, topic, bytes);
 
                 if(pubParts.size() == 0 && node.children.find("#") != node.children.end()) {
@@ -216,7 +217,7 @@ private:
                 }
 
                 publishImpl(node, pubParts, topic, bytes);
-           }
+            }
         }
     }
 

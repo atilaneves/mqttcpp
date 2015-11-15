@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <boost/algorithm/string.hpp>
 
+using NodePtr = SubscriptionTree::NodePtr;
 
 namespace {
 
