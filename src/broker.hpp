@@ -137,29 +137,43 @@ public:
     }
 
     void publish(gsl::cstring_span<> topic, gsl::span<ubyte> bytes) {
-        (void)topic;
-        (void)bytes;
+        std::deque<std::string> pubParts;
+        const auto topicStr = gsl::to_string(topic);
+        boost::split(pubParts, topicStr, boost::is_any_of("/"));
+        publishImpl(_tree, pubParts, topicStr, bytes);
     }
 
     void subscribe(S& subscriber, std::vector<std::string> topics) {
+        std::vector<MqttSubscribe::Topic> newTopics(topics.size());
+        std::transform(topics.cbegin(), topics.cend(), newTopics.begin(),
+                       [](auto t) { return MqttSubscribe::Topic(t, 0); });
+        subscribe(subscriber, newTopics);
+    }
+
+    void subscribe(S& subscriber, std::vector<MqttSubscribe::Topic> topics) {
         invalidateCache();
         for(const auto& topic: topics) {
             std::deque<std::string> subParts;
-            boost::split(subParts, topic, boost::is_any_of("/"));
+            boost::split(subParts, topic.topic, boost::is_any_of("/"));
             auto node = addOrFindNode(_tree, subParts);
-            node.leaves.emplace_back(Subscription<S>{subscriber, topic});
+            node.leaves.emplace_back(Subscription<S>{subscriber, topic.topic});
         }
     }
 
+
 private:
 
+    struct Node;
+    using NodePtr = std::shared_ptr<Node>;
+
     struct Node {
-        std::unordered_map<std::string, Node*> children;
+        std::unordered_map<std::string, NodePtr> children;
         std::vector<Subscription<S>> leaves;
     };
 
+
     bool _useCache;
-    std::unordered_map<std::string, S&> _cache;
+    std::unordered_map<std::string, std::vector<S*>> _cache;
     Node _tree;
 
     void invalidateCache() {
@@ -172,11 +186,45 @@ private:
         const auto& part = parts[0];
         //create if not already here
         if(tree.children.find(part) == tree.children.end()) {
-            tree.children[part] = new Node{};
+            tree.children.emplace(part, std::make_shared<Node>());
         }
 
         parts.pop_front();
         return addOrFindNode(tree, parts);
+    }
+
+    void publishImpl(Node& tree, std::deque<std::string>& pubParts, const std::string& topic, gsl::span<ubyte> bytes) {
+
+        if(_useCache && _cache.find(topic) != _cache.end()) {
+            for(auto subscriber: _cache[topic]) subscriber->newMessage(bytes);
+            return;
+        }
+
+        if(pubParts.size() == 0) return;
+
+        const auto front = pubParts[0];
+        pubParts.pop_front();
+
+        for(const auto& part: std::vector<std::string>{front, "#", "+"}) {
+            if(tree.children.find(part) != tree.children.end()) {
+                auto& node = *tree.children[part];
+                if(pubParts.size() == 0 || part == "#") publishNode(node, topic, bytes);
+
+                if(pubParts.size() == 0 && node.children.find("#") != node.children.end()) {
+                    //So that "finance/#" matches "finance"
+                    publishNode(*node.children["#"], topic, bytes);
+                }
+
+                publishImpl(node, pubParts, topic, bytes);
+           }
+        }
+    }
+
+    void publishNode(Node& node, const std::string& topic, gsl::span<ubyte> bytes) {
+        for(auto& subscription: node.leaves) {
+            subscription.subscriber.newMessage(bytes);
+            if(_useCache) _cache[topic].emplace_back(&subscription.subscriber);
+        }
     }
 };
 
@@ -184,8 +232,13 @@ template<typename S>
 class Subscription {
 public:
 
-    Subscription(S&, const std::string&) {
+    Subscription(S& subscriber, gsl::cstring_span<> topic):
+        subscriber{subscriber}, topic{topic} {
     }
+
+
+    S& subscriber;
+    std::string topic;
 };
 
 
