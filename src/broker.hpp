@@ -121,6 +121,7 @@ private:
 
 using NodePtr = SubscriptionTree::NodePtr;
 
+#include "string_span.h"
 
 template<typename S>
 class MqttBroker {
@@ -129,6 +130,16 @@ public:
     MqttBroker(bool useCache):
         _useCache{useCache}
     {
+    }
+
+    void publish(gsl::cstring_span<> topic, gsl::span<ubyte> bytes) {
+        (void)topic;
+        (void)bytes;
+    }
+
+    void subscribe(S& subscriber, std::vector<std::string> topics) {
+        (void)subscriber;
+        (void)topics;
     }
 
 private:
