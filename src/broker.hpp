@@ -122,7 +122,7 @@ private:
 };
 
 
-#include "string_span.h"
+#include "gsl.h"
 
 template<typename S> class Subscription;
 
@@ -260,7 +260,7 @@ template<typename S>
 class Subscription {
 public:
 
-    Subscription(S* subscriber, gsl::cstring_span<> topic) noexcept :
+    Subscription(gsl::not_null<S*> subscriber, gsl::cstring_span<> topic) noexcept :
         subscriber{subscriber}, topic{gsl::to_string(topic)} {
     }
 
@@ -270,7 +270,7 @@ public:
         return isSameTopic && subscriber == &sub;
     }
 
-    S* subscriber;
+    gsl::not_null<S*> subscriber;
     std::string topic;
 };
 
