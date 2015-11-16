@@ -128,7 +128,7 @@ static void checkMatches(const std::string& pubTopic, const std::string& subTopi
     }
 }
 
-TEST_CASE("wildcards") {
+TEST_CASE("wildcards match") {
     checkMatches("foo/bar/baz", "foo/bar/baz", true);
     checkMatches("foo/bar", "foo/+", true);
     checkMatches("foo/baz", "foo/+", true);
@@ -144,4 +144,47 @@ TEST_CASE("wildcards") {
     checkMatches("finance/stock", "finance/stock/ibm", false);
     checkMatches("topics/foo/bar", "topics/foo/#", true);
     checkMatches("topics/bar/baz/boo", "topics/foo/#", false);
+}
+
+TEST_CASE("subscribe with wildcards") {
+    for(const auto useCache: {false, true}) {
+        vector<ubyte> msg3{3};
+        vector<ubyte> msg4{4};
+        vector<ubyte> msg5{5};
+        vector<ubyte> msg6{6};
+        vector<ubyte> msg7{7};
+
+        MqttBroker<TestMqttSubscriber> broker{useCache};
+        TestMqttSubscriber subscriber1;
+
+        broker.subscribe(subscriber1, {"topics/foo/+"});
+        broker.publish("topics/foo/bar", msg3);
+        broker.publish("topics/bar/baz/boo", msg4); //shouldn't get this one
+        REQUIRE(subscriber1.messages == vector<Payload>{msg3});
+
+        TestMqttSubscriber subscriber2;
+        broker.subscribe(subscriber2, {"topics/foo/#"});
+        broker.publish("topics/foo/bar", msg3);
+        broker.publish("topics/bar/baz/boo", msg4);
+
+        REQUIRE(subscriber1.messages == (vector<Payload>{msg3, msg3}));
+        REQUIRE(subscriber2.messages == (vector<Payload>{msg3}));
+
+        TestMqttSubscriber subscriber3;
+        broker.subscribe(subscriber3, {"topics/+/bar"});
+        TestMqttSubscriber subscriber4;
+        broker.subscribe(subscriber4, {"topics/#"});
+
+        broker.publish("topics/foo/bar", msg3);
+        broker.publish("topics/bar/baz/boo", msg4);
+        broker.publish("topics/boo/bar/zoo", msg5);
+        broker.publish("topics/foo/bar/zoo", msg6);
+        broker.publish("topics/bbobobobo/bar", msg7);
+
+        REQUIRE(subscriber1.messages == (vector<Payload>{msg3, msg3, msg3}));
+        REQUIRE(subscriber2.messages == (vector<Payload>{msg3, msg3, msg6}));
+        REQUIRE(subscriber3.messages == (vector<Payload>{msg3, msg7}));
+        REQUIRE(subscriber4.messages == (vector<Payload>{msg3, msg4, msg5, msg6, msg7}));
+
+    }
 }
