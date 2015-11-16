@@ -111,3 +111,37 @@ TEST_CASE("unsubscribe one") {
         REQUIRE(subscriber.messages == (vector<Payload>{msg1, msg2, msg2}));
     }
 }
+
+static void checkMatches(const std::string& pubTopic, const std::string& subTopic, bool matches) {
+    for(const auto useCache: {false, true}) {
+        MqttBroker<TestMqttSubscriber> broker{useCache};
+        TestMqttSubscriber subscriber;
+
+        vector<ubyte> msg1{2, 4, 6};
+
+        broker.subscribe(subscriber, {subTopic});
+        broker.publish(pubTopic, msg1);
+        if(matches)
+            REQUIRE(subscriber.messages == vector<Payload>{msg1});
+        else
+            REQUIRE(subscriber.messages == vector<Payload>{});
+    }
+}
+
+TEST_CASE("wildcards") {
+    checkMatches("foo/bar/baz", "foo/bar/baz", true);
+    checkMatches("foo/bar", "foo/+", true);
+    checkMatches("foo/baz", "foo/+", true);
+    checkMatches("foo/bar/baz", "foo/+", false);
+    checkMatches("foo/bar", "foo/#", true);
+    checkMatches("foo/bar/baz", "foo/#", true);
+    checkMatches("foo/bar/baz/boo", "foo/#", true);
+    checkMatches("foo/bla/bar/baz/boo/bogadog", "foo/+/bar/baz/#", true);
+    checkMatches("finance", "finance/#", true);
+    checkMatches("finance", "finance#", false);
+    checkMatches("finance", "#", true);
+    checkMatches("finance/stock", "#", true);
+    checkMatches("finance/stock", "finance/stock/ibm", false);
+    checkMatches("topics/foo/bar", "topics/foo/#", true);
+    checkMatches("topics/bar/baz/boo", "topics/foo/#", false);
+}
