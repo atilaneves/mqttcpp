@@ -65,13 +65,13 @@ TEST_CASE("subscribe") {
         vector<ubyte> msg2{1, 3, 5, 7};
 
         broker.subscribe(subscriber, {"topics/foo"});
-        broker.publish(ensure_z("topics/foo"), msg1);
-        broker.publish(ensure_z("topics/bar"), msg2);
+        broker.publish("topics/foo", msg1);
+        broker.publish("topics/bar", msg2);
         REQUIRE(subscriber.messages == vector<Payload>{msg1});
 
         broker.subscribe(subscriber, {"topics/bar"});
-        broker.publish(ensure_z("topics/foo"), msg1);
-        broker.publish(ensure_z("topics/bar"), msg2);
+        broker.publish("topics/foo", msg1);
+        broker.publish("topics/bar", msg2);
         REQUIRE(subscriber.messages == (vector<Payload>{msg1, msg1, msg2}));
     }
 }
@@ -86,13 +86,13 @@ TEST_CASE("unsubscribe all") {
         vector<ubyte> msg2{1, 3, 5, 7};
 
         broker.subscribe(subscriber, {"topics/foo"});
-        broker.publish(ensure_z("topics/foo"), msg1);
-        broker.publish(ensure_z("topics/bar"), msg2);
+        broker.publish("topics/foo", msg1);
+        broker.publish("topics/bar", msg2);
         REQUIRE(subscriber.messages == vector<Payload>{msg1});
 
         broker.unsubscribe(subscriber);
-        broker.publish(ensure_z("topics/foo"), msg1);
-        broker.publish(ensure_z("topics/bar"), msg2);
+        broker.publish("topics/foo", msg1);
+        broker.publish("topics/bar", msg2);
         REQUIRE(subscriber.messages == vector<Payload>{msg1}); //shouldn't have changed
     }
 }
@@ -107,15 +107,15 @@ TEST_CASE("unsubscribe one") {
         vector<ubyte> msg3{9, 8, 7, 6, 5};
 
         broker.subscribe(subscriber, vector<string>{"topics/foo", "topics/bar"});
-        broker.publish(ensure_z("topics/foo"), msg1);
-        broker.publish(ensure_z("topics/bar"), msg2);
-        broker.publish(ensure_z("topics/baz"), msg3);
+        broker.publish("topics/foo", msg1);
+        broker.publish("topics/bar", msg2);
+        broker.publish("topics/baz", msg3);
         REQUIRE(subscriber.messages == (vector<Payload>{msg1, msg2}));
 
         broker.unsubscribe(subscriber, {"topics/foo"});
-        broker.publish(ensure_z("topics/foo"), msg1);
-        broker.publish(ensure_z("topics/bar"), msg2);
-        broker.publish(ensure_z("topics/baz"), msg3);
+        broker.publish("topics/foo", msg1);
+        broker.publish("topics/bar", msg2);
+        broker.publish("topics/baz", msg3);
         REQUIRE(subscriber.messages == (vector<Payload>{msg1, msg2, msg2}));
     }
 }
@@ -166,14 +166,14 @@ TEST_CASE("subscribe with wildcards") {
         TestMqttSubscriber subscriber1;
 
         broker.subscribe(subscriber1, {"topics/foo/+"});
-        broker.publish(ensure_z("topics/foo/bar"), msg3);
-        broker.publish(ensure_z("topics/bar/baz/boo"), msg4); //shouldn't get this one
+        broker.publish("topics/foo/bar", msg3);
+        broker.publish("topics/bar/baz/boo", msg4); //shouldn't get this one
         REQUIRE(subscriber1.messages == vector<Payload>{msg3});
 
         TestMqttSubscriber subscriber2;
         broker.subscribe(subscriber2, {"topics/foo/#"});
-        broker.publish(ensure_z("topics/foo/bar"), msg3);
-        broker.publish(ensure_z("topics/bar/baz/boo"), msg4);
+        broker.publish("topics/foo/bar", msg3);
+        broker.publish("topics/bar/baz/boo", msg4);
 
         REQUIRE(subscriber1.messages == (vector<Payload>{msg3, msg3}));
         REQUIRE(subscriber2.messages == (vector<Payload>{msg3}));
@@ -183,11 +183,11 @@ TEST_CASE("subscribe with wildcards") {
         TestMqttSubscriber subscriber4;
         broker.subscribe(subscriber4, {"topics/#"});
 
-        broker.publish(ensure_z("topics/foo/bar"), msg3);
-        broker.publish(ensure_z("topics/bar/baz/boo"), msg4);
-        broker.publish(ensure_z("topics/boo/bar/zoo"), msg5);
-        broker.publish(ensure_z("topics/foo/bar/zoo"), msg6);
-        broker.publish(ensure_z("topics/bbobobobo/bar"), msg7);
+        broker.publish("topics/foo/bar", msg3);
+        broker.publish("topics/bar/baz/boo", msg4);
+        broker.publish("topics/boo/bar/zoo", msg5);
+        broker.publish("topics/foo/bar/zoo", msg6);
+        broker.publish("topics/bbobobobo/bar", msg7);
 
         REQUIRE(subscriber1.messages == (vector<Payload>{msg3, msg3, msg3}));
         REQUIRE(subscriber2.messages == (vector<Payload>{msg3, msg3, msg6}));
@@ -206,8 +206,8 @@ TEST_CASE("plus") {
         TestMqttSubscriber subscriber;
 
         broker.subscribe(subscriber, {MqttSubscribe::Topic{"foo/bar/+", 0}});
-        broker.publish(ensure_z("foo/bar/baz"), msg1);
-        broker.publish(ensure_z("foo/boogagoo"), msg2);
+        broker.publish("foo/bar/baz", msg1);
+        broker.publish("foo/boogagoo", msg2);
         REQUIRE(subscriber.messages == vector<Payload>{msg1});
      }
 }

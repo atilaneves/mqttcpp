@@ -163,7 +163,11 @@ public:
         unsubscribeImpl(_tree, subscriber, topics);
     }
 
-    void publish(const gsl::cstring_span<> topicSpan, const gsl::span<ubyte> bytes) {
+    void publish(const char* topic, gsl::span<ubyte> bytes) {
+        publish(gsl::ensure_z(topic), bytes);
+    }
+
+    void publish(const gsl::cstring_span<> topicSpan, gsl::span<ubyte> bytes) {
         const auto topic = gsl::to_string(topicSpan);
 
         if(_useCache && _cache.find(topic) != _cache.end()) {
