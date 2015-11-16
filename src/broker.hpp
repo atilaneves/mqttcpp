@@ -136,11 +136,17 @@ public:
     {
     }
 
-    void publish(const gsl::cstring_span<> topic, const gsl::span<ubyte> bytes) {
+    void publish(const gsl::cstring_span<> topicSpan, const gsl::span<ubyte> bytes) {
+        const auto topic = gsl::to_string(topicSpan);
+
+        if(_useCache && _cache.find(topic) != _cache.end()) {
+            for(auto subscriber: _cache[topic]) subscriber->newMessage(bytes);
+            return;
+        }
+
         std::deque<std::string> pubParts;
-        const auto topicStr = gsl::to_string(topic);
-        boost::split(pubParts, topicStr, boost::is_any_of("/"));
-        publishImpl(_tree, pubParts, topicStr, bytes);
+        boost::split(pubParts, topic, boost::is_any_of("/"));
+        publishImpl(_tree, pubParts, topic, bytes);
     }
 
     void subscribe(S& subscriber, std::vector<std::string> topics) {
@@ -193,15 +199,10 @@ private:
         return addOrFindNode(*tree.children[part], parts);
     }
 
-    void publishImpl(Node& tree, std::deque<std::string>& pubParts, const std::string& topic, const gsl::span<ubyte> bytes) {
-
-        if(_useCache && _cache.find(topic) != _cache.end()) {
-            for(auto subscriber: _cache[topic]) subscriber->newMessage(bytes);
-            return;
-        }
+    void publishImpl(Node& tree, std::deque<std::string>& pubParts,
+                     const std::string& topic, const gsl::span<ubyte> bytes) {
 
         if(pubParts.size() == 0) return;
-
 
         const std::string front = pubParts[0];
         pubParts.pop_front();

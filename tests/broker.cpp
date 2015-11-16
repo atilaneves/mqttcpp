@@ -16,6 +16,7 @@ struct TestMqttSubscriber {
         messages.emplace_back(bytes.begin(), bytes.end());
         assert(messages.size() != 0);
         assert((long)messages[messages.size() - 1].size() == bytes.size());
+        //debug();
     }
 
     void debug() {
@@ -32,7 +33,7 @@ struct TestMqttSubscriber {
 };
 
 TEST_CASE("no subscriptions") {
-    for(const auto useCache: {false}) {
+    for(const auto useCache: {false, true}) {
         MqttBroker<TestMqttSubscriber> broker{useCache};
         TestMqttSubscriber subscriber;
 
@@ -48,7 +49,7 @@ TEST_CASE("no subscriptions") {
 
 
 TEST_CASE("subscribe") {
-    for(const auto useCache: {false}) {
+    for(const auto useCache: {false, true}) {
         MqttBroker<TestMqttSubscriber> broker{useCache};
         TestMqttSubscriber subscriber;
 
