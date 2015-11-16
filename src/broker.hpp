@@ -171,7 +171,7 @@ public:
             return;
         }
 
-        std::deque<std::string> pubParts;
+        std::vector<std::string> pubParts;
         boost::split(pubParts, topic, boost::is_any_of("/"));
         publishImpl(_tree, pubParts, topic, bytes);
     }
@@ -208,13 +208,13 @@ private:
         return addOrFindNode(*tree.children[part], parts);
     }
 
-    void publishImpl(Node& tree, std::deque<std::string>& pubParts,
-                     const std::string& topic, const gsl::span<ubyte> bytes) {
+    void publishImpl(Node& tree, gsl::span<std::string> pubParts,
+                     const std::string& topic, gsl::span<ubyte> bytes) {
 
         if(pubParts.size() == 0) return;
 
         const std::string front = pubParts[0];
-        pubParts.pop_front();
+        pubParts = pubParts.sub(1);
 
         for(const auto& part: std::vector<std::string>{front, "#", "+"}) {
             if(tree.children.find(part) != tree.children.end()) {
@@ -230,6 +230,7 @@ private:
             }
         }
     }
+
 
     void publishNode(Node& node, const std::string& topic, gsl::span<ubyte> bytes) {
         for(auto& subscription: node.leaves) {
