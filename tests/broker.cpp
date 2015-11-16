@@ -188,3 +188,18 @@ TEST_CASE("subscribe with wildcards") {
 
     }
 }
+
+TEST_CASE("plus") {
+    for(const auto useCache: {false, true}) {
+        vector<ubyte> msg1{2, 4, 6};
+        vector<ubyte> msg2{1, 3, 5, 7};
+
+        MqttBroker<TestMqttSubscriber> broker{useCache};
+        TestMqttSubscriber subscriber;
+
+        broker.subscribe(subscriber, {MqttSubscribe::Topic{"foo/bar/+", 0}});
+        broker.publish("foo/bar/baz", msg1);
+        broker.publish("foo/boogagoo", msg2);
+        REQUIRE(subscriber.messages == vector<Payload>{msg1});
+     }
+}
