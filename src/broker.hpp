@@ -154,8 +154,12 @@ public:
     }
 
     void unsubscribe(const S& subscriber) {
-        invalidateCache();
         std::vector<std::string> topics{};
+        unsubscribe(subscriber, topics);
+    }
+
+    void unsubscribe(const S& subscriber, const std::vector<std::string>& topics) {
+        invalidateCache();
         unsubscribeImpl(_tree, subscriber, topics);
     }
 
