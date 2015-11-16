@@ -67,3 +67,24 @@ TEST_CASE("subscribe") {
         REQUIRE(subscriber.messages == (vector<Payload>{msg1, msg1, msg2}));
     }
 }
+
+
+TEST_CASE("unsubscribe all") {
+    for(const auto useCache: {false, true}) {
+        MqttBroker<TestMqttSubscriber> broker{useCache};
+        TestMqttSubscriber subscriber;
+
+        vector<ubyte> msg1{2, 4, 6};
+        vector<ubyte> msg2{1, 3, 5, 7};
+
+        broker.subscribe(subscriber, {"topics/foo"});
+        broker.publish(ensure_z("topics/foo"), msg1);
+        broker.publish(ensure_z("topics/bar"), msg2);
+        REQUIRE(subscriber.messages == vector<Payload>{msg1});
+
+        broker.unsubscribe(subscriber);
+        broker.publish(ensure_z("topics/foo"), msg1);
+        broker.publish(ensure_z("topics/bar"), msg2);
+        REQUIRE(subscriber.messages == vector<Payload>{msg1}); //shouldn't have changed
+    }
+}
