@@ -57,7 +57,14 @@ public:
             break;
 
         case MqttType::PUBLISH:
-            break;
+        {
+            Decerealiser dec{bytes};
+            const auto hdr = dec.create<MqttFixedHeader>();
+            dec.reset();
+            const auto msg = dec.create<MqttPublish>(hdr);
+            _broker.publish(msg.topic, bytes);
+        }
+        break;
 
         case MqttType::SUBSCRIBE:
         {
@@ -65,6 +72,9 @@ public:
             const auto hdr = dec.create<MqttFixedHeader>();
             dec.reset();
             const auto msg = dec.create<MqttSubscribe>(hdr);
+
+            _broker.subscribe(connection, msg.topics);
+
             std::vector<ubyte> suback{0x90, 3, 0, 0, 0};
             suback[2] = msg.msgId >> 8;
             suback[3] = msg.msgId & 0xff;

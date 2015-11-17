@@ -16,7 +16,13 @@ struct TestConnection {
             break;
 
         case MqttType::PUBLISH:
-            payloads.emplace_back(bytes.begin(), bytes.end());
+            {
+                Decerealiser dec{bytes};
+                const auto hdr = dec.create<MqttFixedHeader>();
+                dec.reset();
+                const auto msg = dec.create<MqttPublish>(hdr);
+                payloads.emplace_back(msg.payload.begin(), msg.payload.end());
+            }
             break;
         default:
             break;
@@ -102,4 +108,9 @@ TEST_CASE("subscribe bytes") {
 
     server.newMessage(connection, subscribe);
     REQUIRE(connection.lastMsg == (vector<ubyte>{0x90, 3, 0x33, 0x44, 0}));
+
+    server.newMessage(connection, publish1);
+    server.newMessage(connection, publish2);
+    server.newMessage(connection, publish3);
+    REQUIRE(connection.payloads == (vector<Payload>{{1, 2, 3, 4}, {9, 8, 7}}));
 }
