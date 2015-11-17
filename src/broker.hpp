@@ -163,11 +163,11 @@ public:
         unsubscribeImpl(_tree, subscriber, topics);
     }
 
-    void publish(const char* topic, gsl::span<ubyte> bytes) {
+    void publish(const char* topic, gsl::span<const ubyte> bytes) {
         publish(gsl::ensure_z(topic), bytes);
     }
 
-    void publish(const gsl::cstring_span<> topicSpan, gsl::span<ubyte> bytes) {
+    void publish(const gsl::cstring_span<> topicSpan, gsl::span<const ubyte> bytes) {
         const auto topic = gsl::to_string(topicSpan);
 
         if(_useCache && _cache.find(topic) != _cache.end()) {
@@ -213,7 +213,7 @@ private:
     }
 
     void publishImpl(Node& tree, gsl::span<std::string> pubParts,
-                     const std::string& topic, gsl::span<ubyte> bytes) {
+                     const std::string& topic, gsl::span<const ubyte> bytes) {
 
         if(pubParts.size() == 0) return;
 
@@ -236,7 +236,7 @@ private:
     }
 
 
-    void publishNode(Node& node, const std::string& topic, gsl::span<ubyte> bytes) {
+    void publishNode(Node& node, const std::string& topic, gsl::span<const ubyte> bytes) {
         for(auto& subscription: node.leaves) {
             subscription.subscriber->newMessage(bytes);
             if(_useCache) _cache[topic].emplace_back(subscription.subscriber);

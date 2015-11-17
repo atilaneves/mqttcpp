@@ -16,7 +16,7 @@ struct TestMqttSubscriber {
         _index = _sIndex++;
     }
 
-    void newMessage(span<ubyte> bytes) {
+    void newMessage(span<const ubyte> bytes) {
         messages.emplace_back(bytes.begin(), bytes.end());
         assert(messages.size() != 0);
         assert((long)messages[messages.size() - 1].size() == bytes.size());
@@ -45,8 +45,8 @@ TEST_CASE("no subscriptions") {
         MqttBroker<TestMqttSubscriber> broker{useCache};
         TestMqttSubscriber subscriber;
 
-        vector<ubyte> msg1{2, 4, 6};
-        vector<ubyte> msg2{1, 3, 5, 7};
+        const vector<ubyte> msg1{2, 4, 6};
+        const vector<ubyte> msg2{1, 3, 5, 7};
 
         broker.publish("topics/foo", as_span(msg1));
         broker.publish("topics/bar", as_span(msg2));
@@ -61,8 +61,8 @@ TEST_CASE("subscribe") {
         MqttBroker<TestMqttSubscriber> broker{useCache};
         TestMqttSubscriber subscriber;
 
-        vector<ubyte> msg1{2, 4, 6};
-        vector<ubyte> msg2{1, 3, 5, 7};
+        const vector<ubyte> msg1{2, 4, 6};
+        const vector<ubyte> msg2{1, 3, 5, 7};
 
         broker.subscribe(subscriber, {"topics/foo"});
         broker.publish("topics/foo", msg1);
@@ -82,8 +82,8 @@ TEST_CASE("unsubscribe all") {
         MqttBroker<TestMqttSubscriber> broker{useCache};
         TestMqttSubscriber subscriber;
 
-        vector<ubyte> msg1{2, 4, 6};
-        vector<ubyte> msg2{1, 3, 5, 7};
+        const vector<ubyte> msg1{2, 4, 6};
+        const vector<ubyte> msg2{1, 3, 5, 7};
 
         broker.subscribe(subscriber, {"topics/foo"});
         broker.publish("topics/foo", msg1);
@@ -102,9 +102,9 @@ TEST_CASE("unsubscribe one") {
         MqttBroker<TestMqttSubscriber> broker{useCache};
         TestMqttSubscriber subscriber;
 
-        vector<ubyte> msg1{2, 4, 6};
-        vector<ubyte> msg2{1, 3, 5, 7};
-        vector<ubyte> msg3{9, 8, 7, 6, 5};
+        const vector<ubyte> msg1{2, 4, 6};
+        const vector<ubyte> msg2{1, 3, 5, 7};
+        const vector<ubyte> msg3{9, 8, 7, 6, 5};
 
         broker.subscribe(subscriber, vector<string>{"topics/foo", "topics/bar"});
         broker.publish("topics/foo", msg1);
@@ -125,7 +125,7 @@ static void checkMatches(const std::string& pubTopic, const std::string& subTopi
         MqttBroker<TestMqttSubscriber> broker{useCache};
         TestMqttSubscriber subscriber;
 
-        vector<ubyte> msg1{2, 4, 6};
+        const vector<ubyte> msg1{2, 4, 6};
 
         broker.subscribe(subscriber, {subTopic});
         broker.publish(pubTopic, msg1);
@@ -156,11 +156,11 @@ TEST_CASE("wildcards match") {
 
 TEST_CASE("subscribe with wildcards") {
     for(const auto useCache: {false, true}) {
-        vector<ubyte> msg3{3};
-        vector<ubyte> msg4{4};
-        vector<ubyte> msg5{5};
-        vector<ubyte> msg6{6};
-        vector<ubyte> msg7{7};
+        const vector<ubyte> msg3{3};
+        const vector<ubyte> msg4{4};
+        const vector<ubyte> msg5{5};
+        const vector<ubyte> msg6{6};
+        const vector<ubyte> msg7{7};
 
         MqttBroker<TestMqttSubscriber> broker{useCache};
         TestMqttSubscriber subscriber1;
@@ -199,8 +199,8 @@ TEST_CASE("subscribe with wildcards") {
 
 TEST_CASE("plus") {
     for(const auto useCache: {false, true}) {
-        vector<ubyte> msg1{2, 4, 6};
-        vector<ubyte> msg2{1, 3, 5, 7};
+        const vector<ubyte> msg1{2, 4, 6};
+        const vector<ubyte> msg2{1, 3, 5, 7};
 
         MqttBroker<TestMqttSubscriber> broker{useCache};
         TestMqttSubscriber subscriber;
