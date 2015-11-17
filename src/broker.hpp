@@ -146,7 +146,7 @@ public:
     void subscribe(S& subscriber, std::vector<MqttSubscribe::Topic> topics) {
         invalidateCache();
         for(const auto& topic: topics) {
-            std::deque<std::string> subParts;
+            std::vector<std::string> subParts;
             boost::split(subParts, topic.topic, boost::is_any_of("/"));
             auto& node = addOrFindNode(_tree, subParts);
             node.leaves.emplace_back(Subscription<S>{&subscriber, topic.topic});
@@ -199,7 +199,7 @@ private:
         if(_useCache) _cache.clear();
     }
 
-    static Node& addOrFindNode(Node& tree, std::deque<std::string>& parts) {
+    static Node& addOrFindNode(Node& tree, gsl::span<std::string> parts) {
         if(parts.size() == 0) return tree;
 
         const auto part = parts[0]; //copying is good here
@@ -208,7 +208,7 @@ private:
             tree.children[part] = std::make_shared<Node>();
         }
 
-        parts.pop_front();
+        parts = parts.sub(1);
         return addOrFindNode(*tree.children[part], parts);
     }
 
