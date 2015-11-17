@@ -60,7 +60,7 @@ std::unique_ptr<MqttMessage> MqttFactory::create(std::vector<ubyte> bytes) {
 }
 
 void MqttFactory::handleMessage(std::vector<ubyte>::const_iterator begin, std::vector<ubyte>::const_iterator end,
-                                MqttServer& server, MqttConnection& connection) {
+                                OldMqttServer& server, OldMqttConnection& connection) {
 
     Decerealiser cereal(begin, end);
     auto fixedHeader = cereal.value<MqttFixedHeader>();

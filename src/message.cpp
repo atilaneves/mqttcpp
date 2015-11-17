@@ -62,7 +62,7 @@ void MqttFixedHeader::setRemainingSize(Cereal& cereal) const {
     for(auto b: digits) cereal.grain(b);
 }
 
-void MqttMessage::handle(MqttServer& server, MqttConnection& connection) const {
+void MqttMessage::handle(OldMqttServer& server, OldMqttConnection& connection) const {
     (void)server;
     (void)connection;
 }
@@ -92,7 +92,7 @@ void MqttConnect::cerealise(Cereal& cereal) {
     if(hasPassword) cereal.grain(password);
 }
 
-void MqttConnect::handle(MqttServer& server, MqttConnection& connection) const {
+void MqttConnect::handle(OldMqttServer& server, OldMqttConnection& connection) const {
     server.newConnection(connection, this);
 }
 
@@ -155,7 +155,7 @@ void MqttPublish::cerealise(Cereal& cereal) {
     for(auto& b: payload) cereal.grain(b);
 }
 
-void MqttPublish::handle(MqttServer& server, MqttConnection& connection) const {
+void MqttPublish::handle(OldMqttServer& server, OldMqttConnection& connection) const {
     (void)connection;
     server.publish(topic, payload);
 }
@@ -166,7 +166,7 @@ MqttSubscribe::MqttSubscribe(MqttFixedHeader h):
 
 }
 
-void MqttSubscribe::handle(MqttServer& server, MqttConnection& connection) const {
+void MqttSubscribe::handle(OldMqttServer& server, OldMqttConnection& connection) const {
     server.subscribe(connection, msgId, topics);
 }
 
@@ -203,7 +203,7 @@ MqttUnsubscribe::MqttUnsubscribe(MqttFixedHeader h):header(h) {
 
 }
 
-void MqttUnsubscribe::handle(MqttServer& server, MqttConnection& connection) const {
+void MqttUnsubscribe::handle(OldMqttServer& server, OldMqttConnection& connection) const {
     server.unsubscribe(connection, msgId, topics);
 }
 
@@ -230,15 +230,19 @@ void MqttUnsuback::cerealise(Cereal& cereal) {
 }
 
 
-void MqttDisconnect::handle(MqttServer& server, MqttConnection& connection) const {
+void MqttDisconnect::handle(OldMqttServer& server, OldMqttConnection& connection) const {
     server.unsubscribe(connection);
     connection.disconnect();
 }
 
-void MqttPingReq::handle(MqttServer& server, MqttConnection& connection) const {
+void MqttPingReq::handle(OldMqttServer& server, OldMqttConnection& connection) const {
     server.ping(connection);
 }
 
 std::vector<ubyte> MqttPingResp::encode() const {
     return std::vector<ubyte>{0xd0, 0x00};
+}
+
+MqttType getMessageType(gsl::span<const ubyte> bytes) {
+    return static_cast<MqttType>((bytes[0] >> 4));
 }

@@ -131,7 +131,7 @@ template<typename S>
 class MqttBroker {
 public:
 
-    MqttBroker(bool useCache):
+    MqttBroker(bool useCache = false):
         _useCache{useCache}
     {
     }

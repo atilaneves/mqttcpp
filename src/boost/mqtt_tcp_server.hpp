@@ -23,7 +23,7 @@ private:
     boost::asio::ip::tcp::acceptor _acceptor;
     ConnectionManager _connectionManager;
     boost::asio::ip::tcp::socket _socket;
-    MqttServer _mqttServer;
+    OldMqttServer _mqttServer;
 
     void doAccept();
     void doAwaitStop();

@@ -22,7 +22,7 @@ bool MqttStream::empty() const {
 }
 
 
-void MqttStream::read(MqttServer& server, MqttConnection& connection, const std::vector<ubyte>& bytes) {
+void MqttStream::read(OldMqttServer& server, OldMqttConnection& connection, const std::vector<ubyte>& bytes) {
     *this << bytes;
 
     while(hasMessages()) {
@@ -72,7 +72,7 @@ std::unique_ptr<MqttMessage> MqttStream::createMessage() {
     return msg;
 }
 
-void MqttStream::handleMessage(MqttServer& server, MqttConnection& connection) {
+void MqttStream::handleMessage(OldMqttServer& server, OldMqttConnection& connection) {
     if(!hasMessages()) return;
 
     const auto msgSize = _remaining + MqttFixedHeader::SIZE;

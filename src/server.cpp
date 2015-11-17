@@ -10,7 +10,7 @@ std::vector<ubyte> encode(const T& msg) {
     return cereal.getBytes();
 }
 
-void MqttConnection::newMessage(const std::string& topic, const std::vector<ubyte>& payload) {
+void OldMqttConnection::newMessage(const std::string& topic, const std::vector<ubyte>& payload) {
     Cerealiser cereal;
     cereal << MqttPublish(topic, payload);
     write(cereal.getBytes());
@@ -18,7 +18,7 @@ void MqttConnection::newMessage(const std::string& topic, const std::vector<ubyt
 
 
 
-void MqttServer::newConnection(MqttConnection& connection,
+void OldMqttServer::newConnection(OldMqttConnection& connection,
                                const MqttConnect* connect) {
     if(!connect) {
         std::cerr << "Invalid connect message" << std::endl;
@@ -32,7 +32,7 @@ void MqttServer::newConnection(MqttConnection& connection,
     connection.write(encode(MqttConnack(code)));
 }
 
-void MqttServer::subscribe(MqttConnection& connection, ushort msgId,
+void OldMqttServer::subscribe(OldMqttConnection& connection, ushort msgId,
                            std::vector<std::string> topics) {
     const auto qos = 0;
     std::vector<MqttSubscribe::Topic> realTopics;
@@ -42,7 +42,7 @@ void MqttServer::subscribe(MqttConnection& connection, ushort msgId,
 }
 
 
-void MqttServer::subscribe(MqttConnection& connection, ushort msgId,
+void OldMqttServer::subscribe(OldMqttConnection& connection, ushort msgId,
                            std::vector<MqttSubscribe::Topic> topics) {
     std::vector<ubyte> qos;
     std::transform(topics.begin(), topics.end(), std::back_inserter(qos),
@@ -52,27 +52,27 @@ void MqttServer::subscribe(MqttConnection& connection, ushort msgId,
 }
 
 
-void MqttServer::unsubscribe(MqttConnection& connection) {
+void OldMqttServer::unsubscribe(OldMqttConnection& connection) {
     _broker.unsubscribe(connection);
 }
 
 
-void MqttServer::unsubscribe(MqttConnection& connection, ushort msgId,
+void OldMqttServer::unsubscribe(OldMqttConnection& connection, ushort msgId,
                              std::vector<std::string> topics) {
     connection.write(encode(MqttUnsuback(msgId)));
     _broker.unsubscribe(connection, topics);
 }
 
-void MqttServer::publish(const std::string& topic, const std::string& payload) {
+void OldMqttServer::publish(const std::string& topic, const std::string& payload) {
     _broker.publish(topic, payload);
 }
 
 
-void MqttServer::publish(const std::string& topic, const std::vector<ubyte>& payload) {
+void OldMqttServer::publish(const std::string& topic, const std::vector<ubyte>& payload) {
     _broker.publish(topic, payload);
 }
 
-void MqttServer::ping(MqttConnection& connection) {
+void OldMqttServer::ping(OldMqttConnection& connection) {
     static MqttPingResp msg;
     connection.write(msg.encode());
 }

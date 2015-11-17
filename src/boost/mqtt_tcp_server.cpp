@@ -35,7 +35,7 @@ void MqttTcpServer::doAwaitStop() {
 }
 
 namespace {
-class MqttTcpConnection: public Connection, public MqttConnection {
+class MqttTcpConnection: public Connection, public OldMqttConnection {
 public:
     MqttTcpConnection(const MqttTcpConnection&) = delete;
     MqttTcpConnection& operator=(const MqttTcpConnection&) = delete;
@@ -43,7 +43,7 @@ public:
     enum { BUFFER_SIZE = 1024 * 128};
     explicit MqttTcpConnection(boost::asio::ip::tcp::socket socket,
                                ConnectionManager& manager,
-                               MqttServer& server):
+                               OldMqttServer& server):
         Connection(std::move(socket), manager),
         _connected(true),
         _mqttServer(server),
@@ -67,7 +67,7 @@ public:
 private:
 
     bool _connected;
-    MqttServer& _mqttServer;
+    OldMqttServer& _mqttServer;
     MqttStream _stream;
 
 };

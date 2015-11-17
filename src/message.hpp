@@ -2,12 +2,14 @@
 #define MESSAGE_H_
 
 class Cereal;
-class MqttServer;
-class MqttConnection;
+class OldMqttServer;
+class OldMqttConnection;
 
 #include "dtypes.hpp"
 #include <vector>
 #include <string>
+#include "gsl.h"
+
 
 enum class MqttType {
     RESERVED1   = 0,
@@ -52,7 +54,7 @@ private:
 
 class MqttMessage {
 public:
-    virtual void handle(MqttServer& server, MqttConnection& connection) const;
+    virtual void handle(OldMqttServer& server, OldMqttConnection& connection) const;
 };
 
 
@@ -61,7 +63,7 @@ class MqttConnect: public MqttMessage {
 
     MqttConnect(MqttFixedHeader h);
 
-    void handle(MqttServer& server, MqttConnection& connection) const override;
+    void handle(OldMqttServer& server, OldMqttConnection& connection) const override;
 
     void cerealise(Cereal& cereal);
     bool isBadClientId() const { return clientId.length() < 1 || clientId.length() > 23; }
@@ -111,7 +113,7 @@ public:
 
     MqttSubscribe(MqttFixedHeader h);
 
-    void handle(MqttServer& server, MqttConnection& connection) const override;
+    void handle(OldMqttServer& server, OldMqttConnection& connection) const override;
 
     struct Topic {
         Topic():topic(), qos() {}
@@ -148,7 +150,7 @@ class MqttUnsubscribe: public MqttMessage {
 public:
     MqttUnsubscribe(MqttFixedHeader h);
 
-    virtual void handle(MqttServer& server, MqttConnection& connection) const override;
+    virtual void handle(OldMqttServer& server, OldMqttConnection& connection) const override;
     void cerealise(Cereal& cereal);
 
     MqttFixedHeader header;
@@ -178,7 +180,7 @@ public:
     MqttPublish(bool dup, ubyte qos, bool retain, std::string t, std::vector<ubyte> p, ushort mid = 0);
 
     void cerealise(Cereal& cereal);
-    void handle(MqttServer& server, MqttConnection& connection) const override;
+    void handle(OldMqttServer& server, OldMqttConnection& connection) const override;
 
     MqttFixedHeader header;
     std::string topic;
@@ -188,18 +190,20 @@ public:
 
 class MqttDisconnect: public MqttMessage {
 public:
-    void handle(MqttServer& server, MqttConnection& connection) const override;
+    void handle(OldMqttServer& server, OldMqttConnection& connection) const override;
 };
 
 class MqttPingReq: public MqttMessage {
 public:
-    void handle(MqttServer& server, MqttConnection& connection) const override;
+    void handle(OldMqttServer& server, OldMqttConnection& connection) const override;
 };
 
 class MqttPingResp: public MqttMessage {
 public:
     std::vector<ubyte> encode() const;
 };
+
+MqttType getMessageType(gsl::span<const ubyte> bytes);
 
 
 #endif // MESSAGE_H_
