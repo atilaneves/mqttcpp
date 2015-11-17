@@ -4,7 +4,7 @@
 #include "dtypes.hpp"
 #include "gsl.h"
 #include "message.hpp"
-//#include "Decerealiser.hpp"
+#include "Decerealiser.hpp"
 #include <stdexcept>
 
 #include "broker.hpp"
@@ -60,8 +60,17 @@ public:
             break;
 
         case MqttType::SUBSCRIBE:
-            ;
-            break;
+        {
+            Decerealiser dec{bytes};
+            const auto hdr = dec.create<MqttFixedHeader>();
+            dec.reset();
+            const auto msg = dec.create<MqttSubscribe>(hdr);
+            std::vector<ubyte> suback{0x90, 3, 0, 0, 0};
+            suback[2] = msg.msgId >> 8;
+            suback[3] = msg.msgId & 0xff;
+            connection.newMessage(suback);
+        }
+        break;
 
         default:
             throw std::runtime_error("Unknown message type");

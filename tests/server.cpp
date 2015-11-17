@@ -101,5 +101,5 @@ TEST_CASE("subscribe bytes") {
     REQUIRE(connection.payloads == vector<Payload>{});
 
     server.newMessage(connection, subscribe);
-    REQUIRE(connection.lastMsg == (vector<ubyte>{0x90, 0x33, 0x44, 0}));
+    REQUIRE(connection.lastMsg == (vector<ubyte>{0x90, 3, 0x33, 0x44, 0}));
 }

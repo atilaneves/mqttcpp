@@ -1,7 +1,7 @@
 #ifndef DECEREALISER_H_
 #define DECEREALISER_H_
 
-
+#include "gsl.h"
 #include "Cereal.hpp"
 #include <algorithm>
 #include <memory>
@@ -30,6 +30,10 @@ public:
         _originalIterator(_iterator),
         _currentByte(),
         _bitIndex() {
+    }
+
+    template<typename T> Decerealiser(gsl::span<const unsigned char> bytes):
+        Decerealiser(bytes.begin(), bytes.end()) {
     }
 
     template<typename T>
