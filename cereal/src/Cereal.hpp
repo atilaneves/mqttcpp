@@ -6,7 +6,7 @@
 #include <string>
 #include <stdint.h>
 #include <algorithm>
-
+#include <cassert>
 
 class Cereal {
 public:
@@ -116,9 +116,10 @@ template<typename T>
 void Cereal::grainRawArray(std::vector<T>& val) {
     if(getType() == Type::Read) {
         val.resize(0);
-        while(bytesLeft()) {
+        while(bytesLeft() > 0) {
             val.resize(val.size() + 1);
             grain(val[val.size() - 1]);
+            assert(bytesLeft() >= 0);
         }
     } else {
         for(auto& v: val) grain(v);

@@ -62,32 +62,37 @@ TEST_CASE("connect") {
 }
 
 
+vector<ubyte> publishMsg(const std::string& topic, ushort msgId, initializer_list<ubyte> payload) {
+    vector<ubyte> msg{0x3c}; //fixed header sans remaining length
+    const auto remainingLength = topic.size() + 2 /*topic len*/+ 2 /*msgIdLen*/ + payload.size();
+    msg.emplace_back(remainingLength); //not strictly correct, but ok for testing
+
+    msg.emplace_back(topic.size() >> 8);
+    msg.emplace_back(topic.size() & 0xff);
+    copy(topic.cbegin(), topic.cend(), back_inserter(msg));
+
+    msg.emplace_back(msgId >> 8);
+    msg.emplace_back(msgId & 0xff);
+
+    copy(payload.begin(), payload.end(), back_inserter(msg));
+    return msg;
+}
+
+TEST_CASE("publishMsg") {
+    REQUIRE(publishMsg("third", 0x4321, {2, 4, 6}) ==
+            (vector<ubyte>{
+                0x3c, 0x0c, //fixed header
+                0x00, 0x05, 't', 'h', 'i', 'r', 'd',//topic name
+                0x43, 0x21, //message ID (network byte order)
+                2, 4, 6, //payload
+            }));
+}
+
 //TODO: check for bad connection
 TEST_CASE("subscribe bytes") {
-    const vector<ubyte> publish1
-    {
-        0x3c, 0x0d, //fixed header
-        0x00, 0x05, 'f', 'i', 'r', 's', 't',//topic name
-        0x00, 0x21, //message ID
-        1, 2, 3, 4 //payload
-    };
-
-    const vector<ubyte> publish2
-    {
-        0x3c, 0x0d, //fixed header
-        0x00, 0x06, 's', 'e', 'c', 'o', 'n', 'd',//topic name
-        0x00, 0x21, //message ID
-        9, 8, 7//payload
-    };
-
-    const vector<ubyte> publish3
-    {
-         0x3c, 0x0c, //fixed header
-         0x00, 0x05, 't', 'h', 'i', 'r', 'd',//topic name
-         0x00, 0x21, //message ID
-         2, 4, 6, //payload
-    };
-
+    const vector<ubyte> publish1 = publishMsg("first", 0x21, {1, 2, 3, 4});
+    const vector<ubyte> publish2 = publishMsg("second", 0x33, {9, 8, 7});
+    const vector<ubyte> publish3 = publishMsg("third", 0x44, {2, 4, 6});
     const vector<ubyte> subscribe
     {
          0x8b, 0x13, //fixed header
@@ -122,4 +127,62 @@ TEST_CASE("ping bytes") {
     const vector<ubyte> ping{0xc0, 0};
     server.newMessage(connection, ping);
     REQUIRE(connection.lastMsg == (vector<ubyte>{0xd0, 0}));
+}
+
+
+TEST_CASE("unsubscribe topic bytes") {
+    const vector<ubyte> publish1 = publishMsg("first", 0x21, {1, 2, 3, 4});
+    const vector<ubyte> publish2 = publishMsg("second", 0x33, {9, 8, 7});
+    const vector<ubyte> publish3 = publishMsg("third", 0x44, {2, 4, 6});
+
+    const vector<ubyte> subscribe
+    {
+        0x8b, 0x13, //fixed header
+        0x33, 0x44, //message ID
+        0x00, 0x05, 'f', 'i', 'r', 's', 't',
+        0x01, //qos
+        0x00, 0x06, 's', 'e', 'c', 'o', 'n', 'd',
+        0x02, //qos
+    };
+
+    const vector<ubyte> unsubscribe1
+    {
+        0xa2, 10, //fixed header
+        0x43, 0x21, //msg id
+        0x00, 0x06, 's', 'e', 'c', 'o', 'n', 'd' // topic
+    };
+
+    MqttServer<TestConnection> server;
+    TestConnection connection;
+
+    server.newMessage(connection, subscribe);
+    server.newMessage(connection, publish1);
+    server.newMessage(connection, publish2);
+    server.newMessage(connection, publish3);
+    REQUIRE(connection.payloads == (vector<Payload>{{1, 2, 3, 4}, {9, 8, 7}}));
+
+    server.newMessage(connection, unsubscribe1);
+    //unsuback
+    REQUIRE(connection.lastMsg == (vector<ubyte>{0xb0, 2, 0x43, 0x21}));
+
+    server.newMessage(connection, publish1);
+    server.newMessage(connection, publish2);
+    server.newMessage(connection, publish3);
+    REQUIRE(connection.payloads == (vector<Payload>{{1, 2, 3, 4}, {9, 8, 7}, {1, 2, 3, 4}}));
+
+    const vector<ubyte> unsubscribe2{
+        0xa2, 9, //fixed header
+        0x12, 0x34, //msg id
+        0x00, 0x05, 'f', 'i', 'r', 's', 't',
+    };
+
+    //unsuback
+    server.newMessage(connection, unsubscribe2);
+    REQUIRE(connection.lastMsg == (vector<ubyte>{0xb0, 2, 0x12, 0x34}));
+
+    server.newMessage(connection, publish1);
+    server.newMessage(connection, publish2);
+    server.newMessage(connection, publish3);
+    REQUIRE(connection.payloads == (vector<Payload>{{1, 2, 3, 4}, {9, 8, 7}, {1, 2, 3, 4}}));
+
 }
