@@ -11,7 +11,6 @@
 #include <string>
 #include <vector>
 
-
 class OldMqttConnection: public MqttSubscriber {
 public:
     virtual void newMessage(const std::string& topic, const std::vector<ubyte>& payload) override;
@@ -54,6 +53,11 @@ public:
             static ubyte connackOk[] = {32, 2, 0, 0};
             //TODO: return something other than ok
             connection.newMessage(connackOk);
+            break;
+
+        case MqttType::PINGREQ:
+            static ubyte pingResp[] = {0xd0, 0};
+            connection.newMessage(pingResp);
             break;
 
         case MqttType::PUBLISH:

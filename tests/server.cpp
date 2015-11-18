@@ -114,3 +114,12 @@ TEST_CASE("subscribe bytes") {
     server.newMessage(connection, publish3);
     REQUIRE(connection.payloads == (vector<Payload>{{1, 2, 3, 4}, {9, 8, 7}}));
 }
+
+TEST_CASE("ping bytes") {
+    MqttServer<TestConnection> server;
+    TestConnection connection;
+
+    const vector<ubyte> ping{0xc0, 0};
+    server.newMessage(connection, ping);
+    REQUIRE(connection.lastMsg == (vector<ubyte>{0xd0, 0}));
+}
