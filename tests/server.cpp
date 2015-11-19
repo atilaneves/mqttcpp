@@ -1,6 +1,8 @@
 #include "catch.hpp"
 #include "server.hpp"
 #include "gsl.h"
+#include <sstream>
+
 
 using namespace std;
 using namespace gsl;
@@ -103,6 +105,24 @@ vector<ubyte> subscribeMsgBytes() {
         0x02, //qos
     };
 }
+
+vector<ubyte> subscribeMsg(const std::string& topic, ushort msgId) {
+    vector<ubyte> msg{0x8b}; //fixed header sans remaining length
+    const auto remainingLength = topic.size() + 2 /*topic len*/ + 2 /*msgId*/ + 1 /*qos*/;
+    msg.emplace_back(remainingLength);
+
+    msg.emplace_back(msgId >> 8);
+    msg.emplace_back(msgId & 0xff);
+
+    msg.emplace_back(topic.size() >> 8);
+    msg.emplace_back(topic.size() & 0xff);
+    copy(topic.cbegin(), topic.cend(), back_inserter(msg));
+
+    msg.emplace_back(0); //qos
+
+    return msg;
+}
+
 
 //TODO: check for bad connection
 TEST_CASE("subscribe bytes") {
@@ -213,4 +233,67 @@ TEST_CASE("unsubscribe all bytes") {
     server.newMessage(connection, publish2);
     server.newMessage(connection, publish3);
     REQUIRE(connection.payloads == (vector<Payload>{{1, 2, 3, 4}, {9, 8, 7}}));
+}
+
+
+TEST_CASE("subscribe wildcard bytes") {
+    MqttServer<TestConnection> server;
+
+    constexpr auto numPairs = 2;
+    constexpr auto numWilds = 2;
+    vector<TestConnection> reqs(numPairs);
+    vector<TestConnection> reps(numPairs);
+    vector<TestConnection> wlds(numWilds);
+
+    for(auto i = 0u; i < wlds.size(); ++i) {
+        const auto subscribe = subscribeMsg("pingtest/0/#", i * 20 + 1);
+        server.newMessage(wlds[i], subscribe);
+    }
+
+    for(auto i = 0u; i < reqs.size(); ++i) {
+        stringstream stream;
+        stream << "pingtest/" << i << "/request";
+        const auto subscribe = subscribeMsg(stream.str(), i * 2);
+        server.newMessage(reqs[i], subscribe);
+    }
+
+    for(auto i = 0u; i < reps.size(); ++i) {
+        stringstream stream;
+        stream << "pingtest/" << i << "/reply";
+        const auto subscribe = subscribeMsg(stream.str(), i * 2);
+        server.newMessage(reps[i], subscribe);
+    }
+
+    constexpr auto numMessages = 2;
+    for(int i = 0; i < numPairs; ++i) {
+        for(int j = 0; j < numMessages; ++j) {
+            {
+                stringstream stream;
+                stream << "pingtest/" << i << "/request";
+                const auto msg = publishMsg(stream.str(), j, {0, 1, 2, 3});
+                server.newMessage(reqs[0], msg);
+            }
+            {
+                stringstream stream;
+                stream << "pingtest/" << i << "/reply";
+                const auto msg = publishMsg(stream.str(), j * 2, {9, 8, 7});
+                server.newMessage(reps[0], msg);
+            }
+        }
+    }
+
+    for(auto& req: reqs) {
+        vector<Payload> expected(numMessages, {0, 1, 2, 3});
+        REQUIRE(req.payloads == expected);
+    }
+
+    for(auto& rep: reps) {
+        vector<Payload> expected(numMessages, {9, 8, 7});
+        REQUIRE(rep.payloads == expected);
+    }
+
+    for(auto& wld: wlds) {
+        vector<Payload> expected{{0, 1, 2, 3}, {9, 8, 7}, {0, 1, 2, 3}, {9, 8, 7}};
+        REQUIRE(wld.payloads == expected);
+    }
 }
