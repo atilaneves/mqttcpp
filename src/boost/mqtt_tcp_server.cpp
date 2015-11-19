@@ -68,7 +68,7 @@ private:
 
     bool _connected;
     OldMqttServer& _mqttServer;
-    MqttStream _stream;
+    OldMqttStream _stream;
 
 };
 } //anonymous namespace

@@ -8,9 +8,9 @@
 #include <memory>
 
 
-class MqttStream {
+class OldMqttStream {
 public:
-    explicit MqttStream(ulong bufferSize);
+    explicit OldMqttStream(ulong bufferSize);
 
     void operator<<(const std::vector<ubyte>& bytes);
     void read(OldMqttServer& server, OldMqttConnection& connection, const std::vector<ubyte>& bytes);

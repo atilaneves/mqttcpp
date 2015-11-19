@@ -4,7 +4,7 @@
 #include <cassert>
 #include <iostream>
 
-MqttStream::MqttStream(ulong bufferSize):
+OldMqttStream::OldMqttStream(ulong bufferSize):
     _buffer(bufferSize),
     _bytes(),
     _remaining(0),
@@ -13,16 +13,16 @@ MqttStream::MqttStream(ulong bufferSize):
 {
 }
 
-bool MqttStream::hasMessages() const {
+bool OldMqttStream::hasMessages() const {
     return _bytes.size() >= static_cast<size_t>(_remaining + MqttFixedHeader::SIZE);
 }
 
-bool MqttStream::empty() const {
+bool OldMqttStream::empty() const {
     return _bytes.size() == 0;
 }
 
 
-void MqttStream::read(OldMqttServer& server, OldMqttConnection& connection, const std::vector<ubyte>& bytes) {
+void OldMqttStream::read(OldMqttServer& server, OldMqttConnection& connection, const std::vector<ubyte>& bytes) {
     *this << bytes;
 
     while(hasMessages()) {
@@ -30,7 +30,7 @@ void MqttStream::read(OldMqttServer& server, OldMqttConnection& connection, cons
     }
 }
 
-void MqttStream::operator<<(const std::vector<ubyte>& bytes) {
+void OldMqttStream::operator<<(const std::vector<ubyte>& bytes) {
     checkRealloc(bytes.size());
     const auto end = _bytesRead + bytes.size();
 
@@ -41,7 +41,7 @@ void MqttStream::operator<<(const std::vector<ubyte>& bytes) {
     updateRemaining();
 }
 
-void MqttStream::checkRealloc(ulong numBytes) {
+void OldMqttStream::checkRealloc(ulong numBytes) {
     if(_bytesRead + numBytes > _buffer.size()) {
         copy(_bytes.cbegin(), _bytes.cend(), _buffer.begin());
         _bytesStart = 0;
@@ -50,14 +50,14 @@ void MqttStream::checkRealloc(ulong numBytes) {
     }
 }
 
-void MqttStream::updateRemaining() {
+void OldMqttStream::updateRemaining() {
     if(!_remaining && _bytes.size() >= MqttFixedHeader::SIZE) {
         Decerealiser cereal(slice());
         _remaining = cereal.value<MqttFixedHeader>().remaining;
     }
 }
 
-std::unique_ptr<MqttMessage> MqttStream::createMessage() {
+std::unique_ptr<MqttMessage> OldMqttStream::createMessage() {
     if(!hasMessages()) return nullptr;
 
     const auto theSlice = slice();
@@ -72,7 +72,7 @@ std::unique_ptr<MqttMessage> MqttStream::createMessage() {
     return msg;
 }
 
-void MqttStream::handleMessage(OldMqttServer& server, OldMqttConnection& connection) {
+void OldMqttStream::handleMessage(OldMqttServer& server, OldMqttConnection& connection) {
     if(!hasMessages()) return;
 
     const auto msgSize = _remaining + MqttFixedHeader::SIZE;
@@ -88,7 +88,7 @@ void MqttStream::handleMessage(OldMqttServer& server, OldMqttConnection& connect
 }
 
 
-std::vector<ubyte> MqttStream::slice() const {
+std::vector<ubyte> OldMqttStream::slice() const {
     const auto msgSize = _remaining + MqttFixedHeader::SIZE;
     return std::vector<ubyte>(_bytes.cbegin(), _bytes.cbegin() + msgSize);
 }
