@@ -106,7 +106,7 @@ vector<ubyte> subscribeMsgBytes() {
     };
 }
 
-vector<ubyte> subscribeMsg(const std::string& topic, ushort msgId) {
+static vector<ubyte> subscribeMsg(const std::string& topic, ushort msgId) {
     vector<ubyte> msg{0x8b}; //fixed header sans remaining length
     const auto remainingLength = topic.size() + 2 /*topic len*/ + 2 /*msgId*/ + 1 /*qos*/;
     msg.emplace_back(remainingLength);

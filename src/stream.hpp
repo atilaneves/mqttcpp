@@ -34,4 +34,18 @@ private:
 };
 
 
+class MqttStream {
+public:
+
+    MqttStream(int) {
+    }
+
+    void operator<<(gsl::span<const ubyte>) {
+    }
+
+    template<typename C>
+    void handleMessages(MqttServer<C>&, C&) {
+    }
+};
+
 #endif // STREAM_H_
