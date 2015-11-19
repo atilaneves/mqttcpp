@@ -31,6 +31,10 @@ struct TestConnection {
         lastMsg = Payload(bytes.begin(), bytes.end());
     }
 
+    void disconnect() {
+        connected = false;
+    }
+
     bool connected{false};
     MqttConnack::Code connectionCode{MqttConnack::Code::NO_AUTH};
     vector<Payload> payloads;
@@ -88,20 +92,24 @@ TEST_CASE("publishMsg") {
             }));
 }
 
+vector<ubyte> subscribeMsgBytes() {
+    return
+    {
+        0x8b, 0x13, //fixed header
+        0x33, 0x44, //message ID
+        0x00, 0x05, 'f', 'i', 'r', 's', 't',
+        0x01, //qos
+        0x00, 0x06, 's', 'e', 'c', 'o', 'n', 'd',
+        0x02, //qos
+    };
+}
+
 //TODO: check for bad connection
 TEST_CASE("subscribe bytes") {
-    const vector<ubyte> publish1 = publishMsg("first", 0x21, {1, 2, 3, 4});
-    const vector<ubyte> publish2 = publishMsg("second", 0x33, {9, 8, 7});
-    const vector<ubyte> publish3 = publishMsg("third", 0x44, {2, 4, 6});
-    const vector<ubyte> subscribe
-    {
-         0x8b, 0x13, //fixed header
-         0x33, 0x44, //message ID
-         0x00, 0x05, 'f', 'i', 'r', 's', 't',
-         0x01, //qos
-         0x00, 0x06, 's', 'e', 'c', 'o', 'n', 'd',
-         0x02, //qos
-    };
+    const auto publish1 = publishMsg("first", 0x21, {1, 2, 3, 4});
+    const auto publish2 = publishMsg("second", 0x33, {9, 8, 7});
+    const auto publish3 = publishMsg("third", 0x44, {2, 4, 6});
+    const auto subscribe = subscribeMsgBytes();
 
     MqttServer<TestConnection> server;
     TestConnection connection;
@@ -131,19 +139,10 @@ TEST_CASE("ping bytes") {
 
 
 TEST_CASE("unsubscribe topic bytes") {
-    const vector<ubyte> publish1 = publishMsg("first", 0x21, {1, 2, 3, 4});
-    const vector<ubyte> publish2 = publishMsg("second", 0x33, {9, 8, 7});
-    const vector<ubyte> publish3 = publishMsg("third", 0x44, {2, 4, 6});
-
-    const vector<ubyte> subscribe
-    {
-        0x8b, 0x13, //fixed header
-        0x33, 0x44, //message ID
-        0x00, 0x05, 'f', 'i', 'r', 's', 't',
-        0x01, //qos
-        0x00, 0x06, 's', 'e', 'c', 'o', 'n', 'd',
-        0x02, //qos
-    };
+    const auto publish1 = publishMsg("first", 0x21, {1, 2, 3, 4});
+    const auto publish2 = publishMsg("second", 0x33, {9, 8, 7});
+    const auto publish3 = publishMsg("third", 0x44, {2, 4, 6});
+    const auto subscribe = subscribeMsgBytes();
 
     const vector<ubyte> unsubscribe1
     {
@@ -185,4 +184,33 @@ TEST_CASE("unsubscribe topic bytes") {
     server.newMessage(connection, publish3);
     REQUIRE(connection.payloads == (vector<Payload>{{1, 2, 3, 4}, {9, 8, 7}, {1, 2, 3, 4}}));
 
+}
+
+TEST_CASE("unsubscribe all bytes") {
+    const auto publish1 = publishMsg("first", 0x21, {1, 2, 3, 4});
+    const auto publish2 = publishMsg("second", 0x33, {9, 8, 7});
+    const auto publish3 = publishMsg("third", 0x44, {2, 4, 6});
+    const auto subscribe = subscribeMsgBytes();
+    const vector<ubyte> disconnect{0xe0, 0};
+
+    MqttServer<TestConnection> server;
+    TestConnection connection;
+
+    const auto bytes = connectionMsgBytes();
+    server.newMessage(connection, bytes);
+    REQUIRE(connection.connected == true);
+
+    server.newMessage(connection, subscribe);
+    server.newMessage(connection, publish1);
+    server.newMessage(connection, publish2);
+    server.newMessage(connection, publish3);
+    REQUIRE(connection.payloads == (vector<Payload>{{1, 2, 3, 4}, {9, 8, 7}}));
+
+    server.newMessage(connection, disconnect);
+    REQUIRE(connection.connected == false);
+
+    server.newMessage(connection, publish1);
+    server.newMessage(connection, publish2);
+    server.newMessage(connection, publish3);
+    REQUIRE(connection.payloads == (vector<Payload>{{1, 2, 3, 4}, {9, 8, 7}}));
 }

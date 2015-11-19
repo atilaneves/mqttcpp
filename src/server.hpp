@@ -93,10 +93,17 @@ public:
             dec.reset();
             const auto msg = dec.create<MqttUnsubscribe>(hdr);
             _broker.unsubscribe(connection, msg.topics);
-            const std::vector<ubyte> unsuback{0xb0, 2, static_cast<ubyte>(msg.msgId >> 8), static_cast<ubyte>(msg.msgId & 0xff)};
+            const std::vector<ubyte> unsuback{
+                0xb0, 2,
+                static_cast<ubyte>(msg.msgId >> 8), static_cast<ubyte>(msg.msgId & 0xff)};
             connection.newMessage(unsuback);
         }
         break;
+
+        case MqttType::DISCONNECT:
+            connection.disconnect();
+            _broker.unsubscribe(connection);
+            break;
 
         default:
             throw std::runtime_error("Unknown message type");
