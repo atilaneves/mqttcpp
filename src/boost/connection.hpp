@@ -25,7 +25,7 @@ public:
     void stop();
 
     void newMessage(gsl::span<const ubyte> bytes);
-    void disconnect() noexcept { connected = false; }
+    void disconnect();
 
 
 private:
@@ -33,7 +33,7 @@ private:
     boost::asio::ip::tcp::socket _socket;
     ConnectionManager& _connectionManager;
     MqttServer<Connection>& _server;
-    bool connected{true};
+    bool _connected{true};
     MqttStream _stream;
     std::vector<ubyte> _buffer;
 

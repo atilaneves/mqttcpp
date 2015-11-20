@@ -26,6 +26,7 @@ void Connection::stop() {
 
 void Connection::doRead() {
     auto self(shared_from_this());
+    if(!_connected) return;
     _socket.async_read_some(boost::asio::buffer(_stream.readableData(), _stream.readableDataSize()),
         [this, self](boost::system::error_code error, std::size_t numBytes) {
             if(!error) {
@@ -40,10 +41,18 @@ void Connection::doRead() {
 }
 
 void Connection::newMessage(span<const ubyte> bytes) {
-    if(!connected) return;
-
     auto self(shared_from_this());
+    if(!_connected) return;
+
     boost::asio::async_write(_socket, boost::asio::buffer(bytes.data(), bytes.size()),
                              [this, self](boost::system::error_code, std::size_t) {
                              });
+}
+
+
+void Connection::disconnect() {
+    auto self(shared_from_this());
+
+    _connected = false;
+    _connectionManager.stop(self);
 }
