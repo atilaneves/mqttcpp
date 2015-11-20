@@ -2,3 +2,4 @@ build
 debug
 release
 .dir-locals.el
+bin
