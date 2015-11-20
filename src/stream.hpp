@@ -32,7 +32,8 @@ public:
         assert(totLen > 0);
 
         while(slice.length() >= totLen) {
-            server.newMessage(connection, slice);
+            const auto msg = slice.sub(0, totLen);
+            server.newMessage(connection, msg);
             slice = slice.sub(totLen);
             totLen = totalLength(slice);
         }
