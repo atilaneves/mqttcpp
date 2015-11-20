@@ -5,11 +5,15 @@
 using namespace std;
 
 
-int main() {
+int main(int argc, char*[]) {
     cout << "C++ MQTT server" << endl;
     try {
         constexpr int port = 1883;
-        MqttTcpServer server(port, false);
+        const auto useCache = argc < 2;
+        if(!useCache) {
+            cout << "Disabling the cache" << endl;
+        }
+        MqttTcpServer server(port, useCache);
         server.run();
     } catch(const std::exception& e) {
         std::cerr << "Exception: " << e.what() << std::endl;
