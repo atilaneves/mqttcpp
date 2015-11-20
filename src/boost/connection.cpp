@@ -25,8 +25,9 @@ void Connection::stop() {
 }
 
 void Connection::doRead() {
-    auto self(shared_from_this());
     if(!_connected) return;
+
+    auto self(shared_from_this());
     _socket.async_read_some(boost::asio::buffer(_stream.readableData(), _stream.readableDataSize()),
         [this, self](boost::system::error_code error, std::size_t numBytes) {
             if(!error) {
@@ -35,15 +36,15 @@ void Connection::doRead() {
             } else if(error != boost::asio::error::operation_aborted) {
                 _connectionManager.stop(shared_from_this());
             } else {
-                cerr << "Error reading from TCP socket" << endl;
+                cerr << "Error: Couldn't read from TCP socket" << endl;
             }
         });
 }
 
 void Connection::newMessage(span<const ubyte> bytes) {
-    auto self(shared_from_this());
     if(!_connected) return;
 
+    auto self(shared_from_this());
     boost::asio::async_write(_socket, boost::asio::buffer(bytes.data(), bytes.size()),
                              [this, self](boost::system::error_code, std::size_t) {
                              });
@@ -51,8 +52,6 @@ void Connection::newMessage(span<const ubyte> bytes) {
 
 
 void Connection::disconnect() {
-    auto self(shared_from_this());
-
     _connected = false;
-    _connectionManager.stop(self);
+    stop();
 }

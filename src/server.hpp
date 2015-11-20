@@ -18,6 +18,7 @@ class MqttServer {
 public:
 
     void newMessage(C& connection, gsl::span<const ubyte> bytes) {
+
         const auto type = getMessageType(bytes);
         switch(type) {
         case MqttType::CONNECT:
@@ -72,8 +73,8 @@ public:
         break;
 
         case MqttType::DISCONNECT:
-            connection.disconnect();
             _broker.unsubscribe(connection);
+            connection.disconnect();
             break;
 
         default:

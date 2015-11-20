@@ -7,6 +7,7 @@
 #include "Decerealiser.hpp"
 #include <vector>
 #include <memory>
+#include <cassert>
 
 
 class MqttStream {
@@ -27,6 +28,8 @@ public:
     void handleMessages(int numBytes, MqttServer<C>& server, C& connection) {
         auto slice = gsl::as_span(_buffer.data(), std::distance(_buffer.begin(), _begin) + numBytes);
         auto totLen = totalLength(slice);
+
+        assert(totLen > 0);
 
         while(slice.length() >= totLen) {
             server.newMessage(connection, slice);
