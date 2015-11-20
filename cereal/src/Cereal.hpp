@@ -56,6 +56,7 @@ public:
     void grainRawArray(std::vector<T>& val);
 
     const Bytes& getBytes() const { return _bytes; }
+    virtual int bytesLeft() const = 0;
 
 protected:
 
@@ -75,7 +76,6 @@ private:
 
     virtual void grainByte(uint8_t& val) = 0;
     virtual void grainBitsImpl(uint32_t& val, int bits) = 0;
-    virtual int bytesLeft() const = 0;
 };
 
 template<typename I, typename V>

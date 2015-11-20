@@ -180,6 +180,6 @@ public:
 
 
 MqttType getMessageType(gsl::span<const ubyte> bytes);
-
+gsl::cstring_span<> getPublishTopic(gsl::span<const ubyte> bytes);
 
 #endif // MESSAGE_H_

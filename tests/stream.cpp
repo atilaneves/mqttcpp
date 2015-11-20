@@ -103,3 +103,33 @@ TEST_CASE("bug from rust impl") {
     stream.handleMessages(numBytes, server, connection);
     REQUIRE(connection.payloads == vector<Payload>{});
 }
+
+
+TEST_CASE("bug header size") {
+    MqttServer<TestConnection> server;
+    TestConnection connection;
+    MqttStream stream{128};
+
+    const auto subscribe = subscribeMsg("top", 33);
+    server.newMessage(connection, subscribe);
+
+    const vector<ubyte> bytes1{
+        0x3c, 10, //fixed header
+        0x00, 0x03, 't', 'o', 'p', //topic name
+        0x00, 0x21, //message ID
+        1, 2, 3, //payload
+        0x3c, 15 //fixed header of the 2nd msg
+    };
+    const vector<ubyte> bytes2{
+        0x00, 0x03, 't', 'o', 'p', //topic name
+        0x00, 0x21, //message ID
+        1, 2, 3, 4, 5, 6, 7, 8 //payload
+   };
+
+    const auto numBytes1 = readInto(stream, bytes1);
+    stream.handleMessages(numBytes1, server, connection);
+    const auto numBytes2 = readInto(stream, bytes2);
+    stream.handleMessages(numBytes2, server, connection);
+
+    REQUIRE(connection.payloads == (vector<Payload>{{1, 2, 3}, {1, 2, 3, 4, 5, 6, 7, 8}}));
+}

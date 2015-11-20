@@ -4,6 +4,7 @@
 #include <vector>
 #include <iostream>
 
+
 using namespace std;
 
 
@@ -209,4 +210,21 @@ void MqttUnsuback::cerealise(Cereal& cereal) {
 
 MqttType getMessageType(gsl::span<const ubyte> bytes) {
     return static_cast<MqttType>((bytes[0] >> 4));
+}
+
+
+gsl::cstring_span<> getPublishTopic(gsl::span<const ubyte> bytes) {
+    if(bytes.size() < 4) {
+        cerr << "Error: Can't get topic from a message of only " << bytes.size() << " bytes:\n";
+        cerr << "[";
+        for(const int b: bytes) {
+            cerr << b << ", ";
+        }
+        cerr << "]" << endl;
+        return {};
+    }
+    //won't work if there's a msg id and the size is < 128 bytes
+    const auto topicLen = (bytes[2] << 8) + bytes[3];
+    const auto charPtr = reinterpret_cast<const char*>(&bytes[4]);
+    return {charPtr, topicLen};
 }

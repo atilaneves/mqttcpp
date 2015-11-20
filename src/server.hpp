@@ -33,44 +33,40 @@ public:
             break;
 
         case MqttType::PUBLISH:
-        {
-            Decerealiser dec{bytes};
-            const auto hdr = dec.create<MqttFixedHeader>();
-            dec.reset();
-            const auto msg = dec.create<MqttPublish>(hdr);
-            _broker.publish(msg.topic, bytes);
-        }
-        break;
+            {
+                _broker.publish(getPublishTopic(bytes), bytes);
+            }
+            break;
 
         case MqttType::SUBSCRIBE:
-        {
-            Decerealiser dec{bytes};
-            const auto hdr = dec.create<MqttFixedHeader>();
-            dec.reset();
-            const auto msg = dec.create<MqttSubscribe>(hdr);
+            {
+                Decerealiser dec{bytes};
+                const auto hdr = dec.create<MqttFixedHeader>();
+                dec.reset();
+                const auto msg = dec.create<MqttSubscribe>(hdr);
 
-            _broker.subscribe(connection, msg.topics);
+                _broker.subscribe(connection, msg.topics);
 
-            std::vector<ubyte> suback{0x90, 3, 0, 0, 0};
-            suback[2] = msg.msgId >> 8;
-            suback[3] = msg.msgId & 0xff;
-            connection.newMessage(suback);
-        }
-        break;
+                std::vector<ubyte> suback{0x90, 3, 0, 0, 0};
+                suback[2] = msg.msgId >> 8;
+                suback[3] = msg.msgId & 0xff;
+                connection.newMessage(suback);
+            }
+            break;
 
         case MqttType::UNSUBSCRIBE:
-        {
-            Decerealiser dec{bytes};
-            const auto hdr = dec.create<MqttFixedHeader>();
-            dec.reset();
-            const auto msg = dec.create<MqttUnsubscribe>(hdr);
-            _broker.unsubscribe(connection, msg.topics);
-            const std::vector<ubyte> unsuback{
-                0xb0, 2,
-                static_cast<ubyte>(msg.msgId >> 8), static_cast<ubyte>(msg.msgId & 0xff)};
-            connection.newMessage(unsuback);
-        }
-        break;
+            {
+                Decerealiser dec{bytes};
+                const auto hdr = dec.create<MqttFixedHeader>();
+                dec.reset();
+                const auto msg = dec.create<MqttUnsubscribe>(hdr);
+                _broker.unsubscribe(connection, msg.topics);
+                const std::vector<ubyte> unsuback{
+                    0xb0, 2,
+                        static_cast<ubyte>(msg.msgId >> 8), static_cast<ubyte>(msg.msgId & 0xff)};
+                connection.newMessage(unsuback);
+            }
+            break;
 
         case MqttType::DISCONNECT:
             _broker.unsubscribe(connection);
@@ -78,7 +74,11 @@ public:
             break;
 
         default:
-            throw std::runtime_error("Unknown message type");
+            std::cerr << "Unknown message type " << (int)type << ":" << std::endl;
+            std::cerr << "[";
+            for(const int b: bytes) std::cerr << b << ", ";
+            std::cerr << "]" << std::endl;
+            break;
         }
     }
 

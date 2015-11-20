@@ -26,15 +26,18 @@ public:
 
     template<typename C>
     void handleMessages(int numBytes, MqttServer<C>& server, C& connection) {
+
         auto slice = gsl::as_span(_buffer.data(), std::distance(_buffer.begin(), _begin) + numBytes);
         auto totLen = totalLength(slice);
 
         assert(totLen > 0);
 
-        while(slice.length() >= totLen) {
+        while(slice.size() >= totLen) {
             const auto msg = slice.sub(0, totLen);
-            server.newMessage(connection, msg);
+
             slice = slice.sub(totLen);
+
+            server.newMessage(connection, msg);
             totLen = totalLength(slice);
         }
 
@@ -56,7 +59,7 @@ private:
     }
 
     static int totalLength(gsl::span<ubyte> bytes) noexcept {
-        return bytes.size() > MqttFixedHeader::SIZE
+        return bytes.size() >= MqttFixedHeader::SIZE
             ? remainingLength(bytes) + MqttFixedHeader::SIZE
             : MqttFixedHeader::SIZE;
     }
