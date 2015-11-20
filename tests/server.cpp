@@ -1,5 +1,6 @@
 #include "catch.hpp"
 #include "server.hpp"
+#include "TestConnection.hpp"
 #include "gsl.h"
 #include <sstream>
 
@@ -7,41 +8,6 @@
 using namespace std;
 using namespace gsl;
 
-using Payload = vector<ubyte>;
-
-struct TestConnection {
-    void newMessage(span<const ubyte> bytes) {
-        switch(getMessageType(bytes)) {
-        case MqttType::CONNACK:
-            connected = true;
-            connectionCode = MqttConnack::Code::ACCEPTED;
-            break;
-
-        case MqttType::PUBLISH:
-            {
-                Decerealiser dec{bytes};
-                const auto hdr = dec.create<MqttFixedHeader>();
-                dec.reset();
-                const auto msg = dec.create<MqttPublish>(hdr);
-                payloads.emplace_back(msg.payload.begin(), msg.payload.end());
-            }
-            break;
-        default:
-            break;
-        }
-
-        lastMsg = Payload(bytes.begin(), bytes.end());
-    }
-
-    void disconnect() {
-        connected = false;
-    }
-
-    bool connected{false};
-    MqttConnack::Code connectionCode{MqttConnack::Code::NO_AUTH};
-    vector<Payload> payloads;
-    Payload lastMsg;
-};
 
 static vector<ubyte> connectionMsgBytes() {
     return {0x10, 0x2a, //fixed header
