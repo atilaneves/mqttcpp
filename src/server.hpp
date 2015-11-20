@@ -2,12 +2,10 @@
 #define SERVER_H_
 
 #include "dtypes.hpp"
-#include "gsl.h"
 #include "message.hpp"
-#include "Decerealiser.hpp"
-#include <stdexcept>
-
 #include "broker.hpp"
+#include "Decerealiser.hpp"
+#include "gsl.h"
 #include <string>
 #include <vector>
 
@@ -16,6 +14,11 @@
 template<typename C>
 class MqttServer {
 public:
+
+    MqttServer(bool useCache = false):
+        _broker{useCache}
+    {
+    }
 
     void newMessage(C& connection, gsl::span<const ubyte> bytes) {
 

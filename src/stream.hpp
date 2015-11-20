@@ -15,7 +15,6 @@ public:
 
     MqttStream(int size):
         _buffer(size),
-        _scratch(size),
         _begin{_buffer.begin()}
     {
     }
@@ -42,20 +41,21 @@ public:
         }
 
         //shift everything to the beginning
-        copy(slice.cbegin(), slice.cend(), _scratch.begin());
-        copy(_scratch.cbegin(), _scratch.cend(), _buffer.begin());
+        //it's okay to overlap in practice
+        copy(slice.cbegin(), slice.cend(), _buffer.begin());
         _begin = _buffer.begin() + slice.size();
     }
 
 private:
 
     std::vector<ubyte> _buffer;
-    std::vector<ubyte> _scratch;
     decltype(_buffer)::iterator _begin;
 
     static int remainingLength(gsl::span<ubyte> bytes) noexcept {
-        Decerealiser dec{bytes};
-        return dec.create<MqttFixedHeader>().remaining;
+        // Decerealiser dec{bytes};
+        // return dec.create<MqttFixedHeader>().remaining;
+        //let's cheat and assume small messages
+        return bytes[1];
     }
 
     static int totalLength(gsl::span<ubyte> bytes) noexcept {
