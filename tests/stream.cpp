@@ -81,13 +81,44 @@ TEST_CASE("MQTT in 2 packets") {
         0x00, 0x21, //message ID
         1, 2, 3 //first part of payload
     };
+    const vector<ubyte> bytes2{4, 5, 6, 7, 8}; //2nd part of payload
 
     const auto numBytes1 = readInto(stream, bytes1);
     stream.handleMessages(numBytes1, server, connection);
     REQUIRE(connection.payloads == vector<Payload>{});
 
-    const vector<ubyte> bytes2{4, 5, 6, 7, 8}; //2nd part of payload
     const auto numBytes2 = readInto(stream, bytes2);
     stream.handleMessages(numBytes2, server, connection);
     REQUIRE(connection.payloads == (vector<Payload>{{1, 2, 3, 4, 5, 6, 7, 8}}));
+}
+
+
+TEST_CASE("Broken header and two messages") {
+    MqttServer<TestConnection> server;
+    TestConnection connection;
+    MqttStream stream{128};
+
+    connection.connected = true; //easier than sending conneciton packet
+
+    const auto subscribe = subscribeMsg("top", 33);
+    server.newMessage(connection, subscribe);
+
+    const vector<ubyte> bytes1{0x3c}; //half of header
+    const vector<ubyte> bytes2{
+        15, //2nd half of fixed header
+        0x00, 0x03, 't', 'o', 'p', //topic name
+        0x00, 0x21, //message ID
+        1, 2, 3, 4, 5, 6, 7, 8,
+        0xe0, 0, //header for disconnect
+    };
+
+    const auto numBytes1 = readInto(stream, bytes1);
+    stream.handleMessages(numBytes1, server, connection);
+    REQUIRE(connection.payloads == vector<Payload>{});
+    REQUIRE(connection.connected == true);
+
+    const auto numBytes2 = readInto(stream, bytes2);
+    stream.handleMessages(numBytes2, server, connection);
+    REQUIRE(connection.payloads == (vector<Payload>{{1, 2, 3, 4, 5, 6, 7, 8}}));
+    REQUIRE(connection.connected == false);
 }
