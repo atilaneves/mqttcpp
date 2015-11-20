@@ -122,3 +122,17 @@ TEST_CASE("Broken header and two messages") {
     REQUIRE(connection.payloads == (vector<Payload>{{1, 2, 3, 4, 5, 6, 7, 8}}));
     REQUIRE(connection.connected == false);
 }
+
+
+TEST_CASE("bug from rust impl") {
+    MqttServer<TestConnection> server;
+    TestConnection connection;
+    MqttStream stream{128};
+
+    connection.connected = true; //easier than sending conneciton packet
+
+    const vector<ubyte> bytes{48, 30, 0, 12, 108, 111, 97, 100, 116, 101, 115, 116, 47, 49, 54, 54};
+    const auto numBytes = readInto(stream, bytes);
+    stream.handleMessages(numBytes, server, connection);
+    REQUIRE(connection.payloads == vector<Payload>{});
+}
