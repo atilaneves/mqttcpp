@@ -10,6 +10,8 @@ public:
 
   ConnectionManager(const ConnectionManager&) = delete;
   ConnectionManager& operator=(const ConnectionManager&) = delete;
+  ConnectionManager(ConnectionManager&&) = delete;
+  ConnectionManager& operator=(ConnectionManager&&) = delete;
 
   ConnectionManager();
 

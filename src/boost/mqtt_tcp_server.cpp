@@ -11,7 +11,8 @@ MqttTcpServer::MqttTcpServer(int port):
     _signals(_ioService),
     _acceptor(_ioService, tcp::endpoint(tcp::v4(), port)),
     _connectionManager(),
-    _socket(_ioService)
+    _socket(_ioService),
+    _mqttServer{true}
 {
 
     _signals.add(SIGINT);
