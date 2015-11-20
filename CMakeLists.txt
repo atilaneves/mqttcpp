@@ -53,22 +53,16 @@ if(NOT WIN32)
 endif()
 
 
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-
-  message("Adding tests to the build")
-
-  if(MQTT_ASAN)
-    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=address")
-  endif()
-  if(MQTT_PROFILE)
-    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -pg")
-  endif()
-
-  file(GLOB_RECURSE TEST_SRCS
-    tests/*.cpp
-    )
-
-  add_executable(ut ${TEST_SRCS})
-  target_link_libraries(ut mqttpure)
-
+if(MQTT_ASAN)
+  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=address")
 endif()
+if(MQTT_PROFILE)
+  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -pg")
+endif()
+
+file(GLOB_RECURSE TEST_SRCS
+  tests/*.cpp
+  )
+
+add_executable(ut ${TEST_SRCS})
+target_link_libraries(ut mqttpure)
