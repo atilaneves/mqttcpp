@@ -45,9 +45,9 @@ public:
     {
     }
 
-    auto begin() noexcept {
-        return _begin;
-    }
+    auto begin() noexcept { return _begin; }
+    auto readableData() noexcept { return _buffer.data() + std::distance(_buffer.begin(), _begin); }
+    auto readableDataSize() noexcept { return std::distance(_begin, _buffer.end()); }
 
     template<typename C>
     void handleMessages(int numBytes, MqttServer<C>& server, C& connection) {

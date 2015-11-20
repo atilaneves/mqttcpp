@@ -12,7 +12,7 @@ public:
     MqttTcpServer(const MqttTcpServer&) = delete;
     MqttTcpServer& operator=(const MqttTcpServer&) = delete;
 
-    explicit MqttTcpServer(int port1);
+    explicit MqttTcpServer(int port);
 
     void run();
 

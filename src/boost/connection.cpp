@@ -1,10 +1,16 @@
 #include "connection.hpp"
 #include "connection_manager.hpp"
 
+using namespace std;
+using namespace gsl;
+
+
 Connection::Connection(boost::asio::ip::tcp::socket socket,
-                       ConnectionManager& manager):
+                       ConnectionManager& manager,
+                       int numStreamBytes):
     _socket(std::move(socket)),
-    _connectionManager(manager)
+    _connectionManager(manager),
+    _stream{numStreamBytes}
 {
 }
 
@@ -18,10 +24,10 @@ void Connection::stop() {
 
 void Connection::doRead() {
     auto self(shared_from_this());
-    _socket.async_read_some(boost::asio::buffer(_buffer),
-        [this, self](boost::system::error_code error, std::size_t numBytes) {
+    _socket.async_read_some(boost::asio::buffer(_stream.readableData(), _stream.readableDataSize()),
+        [this, self](boost::system::error_code error, std::size_t ) {
             if(!error) {
-                handleRead(getBytes(numBytes));
+                cerr << "Error reading from TCP socket" << endl;
                 doRead();
             } else if(error != boost::asio::error::operation_aborted) {
                 _connectionManager.stop(shared_from_this());
@@ -29,14 +35,11 @@ void Connection::doRead() {
         });
 }
 
-void Connection::writeBytes(const std::vector<ubyte>& bytes) {
+void Connection::newMessage(span<const ubyte> bytes) {
+    if(!connected) return;
+
     auto self(shared_from_this());
-    boost::asio::async_write(_socket, boost::asio::buffer(bytes),
+    boost::asio::async_write(_socket, boost::asio::buffer(bytes.data(), bytes.size()),
                              [this, self](boost::system::error_code, std::size_t) {
                              });
-}
-
-std::vector<ubyte> Connection::getBytes(std::size_t numBytes) const {
-    std::vector<ubyte> bytes(std::begin(_buffer), std::begin(_buffer) + numBytes);
-    return bytes;
 }
