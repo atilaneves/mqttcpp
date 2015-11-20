@@ -6,13 +6,13 @@ using boost::asio::ip::tcp;
 
 using namespace gsl;
 
-MqttTcpServer::MqttTcpServer(int port):
+MqttTcpServer::MqttTcpServer(int port, bool useCache):
     _ioService(),
     _signals(_ioService),
     _acceptor(_ioService, tcp::endpoint(tcp::v4(), port)),
     _connectionManager(),
     _socket(_ioService),
-    _mqttServer{true}
+    _mqttServer{useCache}
 {
 
     _signals.add(SIGINT);

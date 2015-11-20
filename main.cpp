@@ -9,7 +9,7 @@ int main() {
     cout << "C++ MQTT server" << endl;
     try {
         constexpr int port = 1883;
-        MqttTcpServer server(port);
+        MqttTcpServer server(port, false);
         server.run();
     } catch(const std::exception& e) {
         std::cerr << "Exception: " << e.what() << std::endl;
