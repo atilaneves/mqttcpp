@@ -1,5 +1,5 @@
 build
 debug
 release
-cereal
-unit-thread
+.dir-locals.el
+bin

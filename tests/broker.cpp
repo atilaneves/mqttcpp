@@ -1,150 +1,213 @@
-#include "unit_thread.hpp"
+#include "catch.hpp"
 #include "broker.hpp"
+#include "gsl.h"
+#include <vector>
+#include <iostream>
+
+using namespace std;
+using namespace gsl;
 
 
-struct TestMqttSubscriber: public MqttSubscriber {
-    void newMessage(const std::string& topic, const std::vector<ubyte>& payload) override {
-        (void)topic;
-        std::string strPayload(payload.begin(), payload.end());
-        messages.emplace_back(strPayload);
+using Payload = vector<ubyte>;
+
+struct TestMqttSubscriber {
+
+    TestMqttSubscriber() {
+        _index = _sIndex++;
     }
-    std::vector<std::string> messages;
+
+    void newMessage(span<const ubyte> bytes) {
+        messages.emplace_back(bytes.begin(), bytes.end());
+        assert(messages.size() != 0);
+        assert((long)messages[messages.size() - 1].size() == bytes.size());
+        //debug();
+    }
+
+    void debug() {
+        cout << "Messages for " << _index << ": " << endl;
+        for(const auto& msg: messages) {
+            for(const auto b: msg) {
+                printf("%#x, ", b);
+            }
+            cout << endl;
+        }
+    }
+
+    vector<Payload> messages;
+    int _index;
+    static int _sIndex;
 };
 
+int TestMqttSubscriber::_sIndex;
 
-struct Subscribe: public TestCase {
-    void test() override {
-        auto broker = MqttBroker();
-
+TEST_CASE("no subscriptions") {
+    for(const auto useCache: {false, true}) {
+        MqttBroker<TestMqttSubscriber> broker{useCache};
         TestMqttSubscriber subscriber;
-        broker.publish("topics/foo", "my foo is foo");
-        checkEqual(subscriber.messages, std::vector<std::string>({}));
 
-        broker.subscribe(subscriber, std::vector<std::string>({"topics/foo"}));
-        broker.publish("topics/foo", "my foo is foo");
-        broker.publish("topics/bar", "my bar is bar");
-        checkEqual(subscriber.messages, std::vector<std::string>({"my foo is foo"}));
+        const vector<ubyte> msg1{2, 4, 6};
+        const vector<ubyte> msg2{1, 3, 5, 7};
 
-        broker.subscribe(subscriber, std::vector<std::string>({"topics/bar"}));
-        broker.publish("topics/foo", "my foo is foo");
-        broker.publish("topics/bar", "my bar is bar");
-        checkEqual(subscriber.messages,
-                   std::vector<std::string>({"my foo is foo", "my foo is foo", "my bar is bar"}));
+        broker.publish("topics/foo", as_span(msg1));
+        broker.publish("topics/bar", as_span(msg2));
+
+        REQUIRE(subscriber.messages == vector<Payload>{});
     }
-};
-REGISTER_TEST(broker, Subscribe)
+}
 
 
-
-struct UnsubscribeAll: public TestCase {
-    void test() override {
-        auto broker = MqttBroker();
+TEST_CASE("subscribe") {
+    for(const auto useCache: {false, true}) {
+        MqttBroker<TestMqttSubscriber> broker{useCache};
         TestMqttSubscriber subscriber;
 
-        broker.subscribe(subscriber, std::vector<std::string>({"topics/foo"}));
-        broker.publish("topics/foo", "my foo is foo");
-        broker.publish("topics/bar", "my bar is bar");
-        checkEqual(subscriber.messages, std::vector<std::string>({"my foo is foo"}));
+        const vector<ubyte> msg1{2, 4, 6};
+        const vector<ubyte> msg2{1, 3, 5, 7};
+
+        broker.subscribe(subscriber, {"topics/foo"});
+        broker.publish("topics/foo", msg1);
+        broker.publish("topics/bar", msg2);
+        REQUIRE(subscriber.messages == vector<Payload>{msg1});
+
+        broker.subscribe(subscriber, {"topics/bar"});
+        broker.publish("topics/foo", msg1);
+        broker.publish("topics/bar", msg2);
+        REQUIRE(subscriber.messages == (vector<Payload>{msg1, msg1, msg2}));
+    }
+}
+
+
+TEST_CASE("unsubscribe all") {
+    for(const auto useCache: {false, true}) {
+        MqttBroker<TestMqttSubscriber> broker{useCache};
+        TestMqttSubscriber subscriber;
+
+        const vector<ubyte> msg1{2, 4, 6};
+        const vector<ubyte> msg2{1, 3, 5, 7};
+
+        broker.subscribe(subscriber, {"topics/foo"});
+        broker.publish("topics/foo", msg1);
+        broker.publish("topics/bar", msg2);
+        REQUIRE(subscriber.messages == vector<Payload>{msg1});
 
         broker.unsubscribe(subscriber);
-        broker.publish("topics/foo", "my foo is foo");
-        broker.publish("topics/bar", "my bar is bar");
-        checkEqual(subscriber.messages, std::vector<std::string>({"my foo is foo"})); //shouldn't have changed
+        broker.publish("topics/foo", msg1);
+        broker.publish("topics/bar", msg2);
+        REQUIRE(subscriber.messages == vector<Payload>{msg1}); //shouldn't have changed
     }
-};
-REGISTER_TEST(broker, UnsubscribeAll)
+}
 
-
-
-struct UnsubscribeOne: public TestCase {
-    void test() override {
-        auto broker = MqttBroker();
+TEST_CASE("unsubscribe one") {
+    for(const auto useCache: {false, true}) {
+        MqttBroker<TestMqttSubscriber> broker{useCache};
         TestMqttSubscriber subscriber;
 
-        broker.subscribe(subscriber, std::vector<std::string>({"topics/foo", "topics/bar"}));
-        broker.publish("topics/foo", "my foo is foo");
-        broker.publish("topics/bar", "my bar is bar");
-        broker.publish("topics/baz", "my baz is baz");
-        checkEqual(subscriber.messages, std::vector<std::string>({"my foo is foo", "my bar is bar"}));
+        const vector<ubyte> msg1{2, 4, 6};
+        const vector<ubyte> msg2{1, 3, 5, 7};
+        const vector<ubyte> msg3{9, 8, 7, 6, 5};
 
-        broker.unsubscribe(subscriber, std::vector<std::string>({"topics/foo"}));
-        broker.publish("topics/foo", "my foo is foo");
-        broker.publish("topics/bar", "my bar is bar");
-        broker.publish("topics/baz", "my baz is baz");
-        checkEqual(subscriber.messages,
-                   std::vector<std::string>({"my foo is foo", "my bar is bar", "my bar is bar"}));
+        broker.subscribe(subscriber, vector<string>{"topics/foo", "topics/bar"});
+        broker.publish("topics/foo", msg1);
+        broker.publish("topics/bar", msg2);
+        broker.publish("topics/baz", msg3);
+        REQUIRE(subscriber.messages == (vector<Payload>{msg1, msg2}));
+
+        broker.unsubscribe(subscriber, {"topics/foo"});
+        broker.publish("topics/foo", msg1);
+        broker.publish("topics/bar", msg2);
+        broker.publish("topics/baz", msg3);
+        REQUIRE(subscriber.messages == (vector<Payload>{msg1, msg2, msg2}));
     }
-};
-REGISTER_TEST(broker, UnsubscribeOne)
+}
 
-
-struct WildCards: public TestCase {
-    void test() override {
-        checkMatches("foo/bar/baz", "foo/bar/baz", true);
-        checkMatches("foo/bar", "foo/+", true);
-        checkMatches("foo/baz", "foo/+", true);
-        checkMatches("foo/bar/baz", "foo/+", false);
-        checkMatches("foo/bar", "foo/#", true);
-        checkMatches("foo/bar/baz", "foo/#", true);
-        checkMatches("foo/bar/baz/boo", "foo/#", true);
-        checkMatches("foo/bla/bar/baz/boo/bogadog", "foo/+/bar/baz/#", true);
-        checkMatches("finance", "finance/#", true);
-        checkMatches("finance", "finance#", false);
-        checkMatches("finance", "#", true);
-        checkMatches("finance/stock", "#", true);
-        checkMatches("finance/stock", "finance/stock/ibm", false);
-        checkMatches("topics/foo/bar", "topics/foo/#", true);
-        checkMatches("topics/bar/baz/boo", "topics/foo/#", false);
-        checkMatches("topics/dir/foo", "#", true);
-    }
-
-    void checkMatches(std::string pubTopic, std::string subTopic, bool matches) {
-        MqttBroker broker;
+static void checkMatches(const std::string& pubTopic, const std::string& subTopic, bool matches) {
+    for(const auto useCache: {false, true}) {
+        MqttBroker<TestMqttSubscriber> broker{useCache};
         TestMqttSubscriber subscriber;
 
-        broker.subscribe(subscriber, std::vector<std::string>({subTopic}));
-        broker.publish(pubTopic, "payload");
-        const auto expected = matches ? std::vector<std::string>({"payload"}) : std::vector<std::string>{};
-        checkEqual(subscriber.messages, expected);
+        const vector<ubyte> msg1{2, 4, 6};
+
+        broker.subscribe(subscriber, {subTopic});
+        broker.publish(pubTopic, msg1);
+        if(matches)
+            REQUIRE(subscriber.messages == vector<Payload>{msg1});
+        else
+            REQUIRE(subscriber.messages == vector<Payload>{});
     }
+}
 
-};
-REGISTER_TEST(broker, WildCards)
+TEST_CASE("wildcards match") {
+    checkMatches("foo/bar/baz", "foo/bar/baz", true);
+    checkMatches("foo/bar", "foo/+", true);
+    checkMatches("foo/baz", "foo/+", true);
+    checkMatches("foo/bar/baz", "foo/+", false);
+    checkMatches("foo/bar", "foo/#", true);
+    checkMatches("foo/bar/baz", "foo/#", true);
+    checkMatches("foo/bar/baz/boo", "foo/#", true);
+    checkMatches("foo/bla/bar/baz/boo/bogadog", "foo/+/bar/baz/#", true);
+    checkMatches("finance", "finance/#", true);
+    checkMatches("finance", "finance#", false);
+    checkMatches("finance", "#", true);
+    checkMatches("finance/stock", "#", true);
+    checkMatches("finance/stock", "finance/stock/ibm", false);
+    checkMatches("topics/foo/bar", "topics/foo/#", true);
+    checkMatches("topics/bar/baz/boo", "topics/foo/#", false);
+}
 
+TEST_CASE("subscribe with wildcards") {
+    for(const auto useCache: {false, true}) {
+        const vector<ubyte> msg3{3};
+        const vector<ubyte> msg4{4};
+        const vector<ubyte> msg5{5};
+        const vector<ubyte> msg6{6};
+        const vector<ubyte> msg7{7};
 
-struct SubscribeWithWildCards: public TestCase {
-    void test() override {
-        MqttBroker broker;
+        MqttBroker<TestMqttSubscriber> broker{useCache};
         TestMqttSubscriber subscriber1;
 
-        broker.subscribe(subscriber1, std::vector<std::string>({"topics/foo/+"}));
-        broker.publish("topics/foo/bar", "3");
-        broker.publish("topics/bar/baz/boo", "4"); //shouldn't get this one
-        checkEqual(subscriber1.messages, std::vector<std::string>({"3"}));
+        broker.subscribe(subscriber1, {"topics/foo/+"});
+        broker.publish("topics/foo/bar", msg3);
+        broker.publish("topics/bar/baz/boo", msg4); //shouldn't get this one
+        REQUIRE(subscriber1.messages == vector<Payload>{msg3});
 
         TestMqttSubscriber subscriber2;
-        broker.subscribe(subscriber2, std::vector<std::string>({"topics/foo/#"}));
-        broker.publish("topics/foo/bar", "3");
-        broker.publish("topics/bar/baz/boo", "4");
+        broker.subscribe(subscriber2, {"topics/foo/#"});
+        broker.publish("topics/foo/bar", msg3);
+        broker.publish("topics/bar/baz/boo", msg4);
 
-        checkEqual(subscriber1.messages, std::vector<std::string>({"3", "3"}));
-        checkEqual(subscriber2.messages, std::vector<std::string>({"3"}));
+        REQUIRE(subscriber1.messages == (vector<Payload>{msg3, msg3}));
+        REQUIRE(subscriber2.messages == (vector<Payload>{msg3}));
 
         TestMqttSubscriber subscriber3;
-        broker.subscribe(subscriber3, std::vector<std::string>({"topics/+/bar"}));
+        broker.subscribe(subscriber3, {"topics/+/bar"});
         TestMqttSubscriber subscriber4;
-        broker.subscribe(subscriber4, std::vector<std::string>({"topics/#"}));
+        broker.subscribe(subscriber4, {"topics/#"});
 
-        broker.publish("topics/foo/bar", "3");
-        broker.publish("topics/bar/baz/boo", "4");
-        broker.publish("topics/boo/bar/zoo", "5");
-        broker.publish("topics/foo/bar/zoo", "6");
-        broker.publish("topics/bbobobobo/bar", "7");
+        broker.publish("topics/foo/bar", msg3);
+        broker.publish("topics/bar/baz/boo", msg4);
+        broker.publish("topics/boo/bar/zoo", msg5);
+        broker.publish("topics/foo/bar/zoo", msg6);
+        broker.publish("topics/bbobobobo/bar", msg7);
 
-        checkEqual(subscriber1.messages, std::vector<std::string>({"3", "3", "3"}));
-        checkEqual(subscriber2.messages, std::vector<std::string>({"3", "3", "6"}));
-        checkEqual(subscriber3.messages, std::vector<std::string>({"3", "7"}));
-        checkEqual(subscriber4.messages, std::vector<std::string>({"3", "4", "5", "6", "7"}));
+        REQUIRE(subscriber1.messages == (vector<Payload>{msg3, msg3, msg3}));
+        REQUIRE(subscriber2.messages == (vector<Payload>{msg3, msg3, msg6}));
+        REQUIRE(subscriber3.messages == (vector<Payload>{msg3, msg7}));
+        REQUIRE(subscriber4.messages == (vector<Payload>{msg3, msg4, msg5, msg6, msg7}));
+
     }
-};
-REGISTER_TEST(broker, SubscribeWithWildCards)
+}
+
+TEST_CASE("plus") {
+    for(const auto useCache: {false, true}) {
+        const vector<ubyte> msg1{2, 4, 6};
+        const vector<ubyte> msg2{1, 3, 5, 7};
+
+        MqttBroker<TestMqttSubscriber> broker{useCache};
+        TestMqttSubscriber subscriber;
+
+        broker.subscribe(subscriber, {MqttSubscribe::Topic{"foo/bar/+", 0}});
+        broker.publish("foo/bar/baz", msg1);
+        broker.publish("foo/boogagoo", msg2);
+        REQUIRE(subscriber.messages == vector<Payload>{msg1});
+     }
+}

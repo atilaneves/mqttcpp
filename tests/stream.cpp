@@ -1,113 +1,135 @@
-#include "unit_thread.hpp"
+#include "catch.hpp"
 #include "stream.hpp"
+#include "TestConnection.hpp"
+#include "gsl.h"
+#include <sstream>
+#include <algorithm>
 
 
-struct MqttInTwoPackets: public TestCase {
-    virtual void test() override {
-        std::vector<ubyte> bytes1{ 0x3c, 0x0f, //fixed header
-                0x00, 0x03, 't', 'o', 'p', //topic name
-                0x00, 0x21, //message ID
-                'b', 'o', 'r' }; //1st part of payload
-        MqttStream stream(128);
-        stream << bytes1;
-        checkFalse(stream.hasMessages());
-        checkNull(stream.createMessage().get());
-
-        std::vector<ubyte> bytes2{ 'o', 'r', 'o', 'o', 'n'}; //2nd part of payload
-        stream << bytes2;
-        checkTrue(stream.hasMessages());
-        const auto publish = dynamic_cast<MqttPublish*>(stream.createMessage().get());
-        checkNotNull(publish);
-    }
-};
-REGISTER_TEST(stream, MqttInTwoPackets)
+using namespace std;
+using namespace gsl;
 
 
-struct TwoMqttInThreePackets: public TestCase {
-    virtual void test() override {
-        std::vector<ubyte> bytes1{ 0x3c, 0x0f, //fixed header
-                0x00, 0x03, 't', 'o', 'p', //topic name
-                0x00, 0x21, //message ID
-                'a', 'b', 'c' }; //1st part of payload
-        MqttStream stream(128);
-        stream << bytes1;
-        checkFalse(stream.hasMessages());
-        checkNull(stream.createMessage().get());
-        checkFalse(stream.empty());
+static vector<ubyte> subscribeMsg(const std::string& topic, ushort msgId) {
+    vector<ubyte> msg{0x8b}; //fixed header sans remaining length
+    const auto remainingLength = topic.size() + 2 /*topic len*/ + 2 /*msgId*/ + 1 /*qos*/;
+    msg.emplace_back(remainingLength);
 
-        std::vector<ubyte> bytes2{ 'd', 'e', 'f', 'g', 'h'}; //2nd part of payload
-        stream << bytes2;
-        checkTrue(stream.hasMessages());
-        const auto publish = dynamic_cast<MqttPublish*>(stream.createMessage().get());
-        checkNotNull(publish);
-        checkTrue(stream.empty());
+    msg.emplace_back(msgId >> 8);
+    msg.emplace_back(msgId & 0xff);
 
-        std::vector<ubyte> bytes3{0xe0, 0x00};
-        stream << bytes3;
-        checkFalse(stream.empty());
-        const auto disconnect = dynamic_cast<MqttDisconnect*>(stream.createMessage().get());
-        checkNotNull(disconnect);
-        checkTrue(stream.empty());
-    }
-};
-REGISTER_TEST(stream, TwoMqttInThreePackets)
+    msg.emplace_back(topic.size() >> 8);
+    msg.emplace_back(topic.size() & 0xff);
+    copy(topic.cbegin(), topic.cend(), back_inserter(msg));
+
+    msg.emplace_back(0); //qos
+
+    return msg;
+}
 
 
-struct TwoMqttInOnePacket: public TestCase {
-    virtual void test() override {
-        MqttStream stream(128);
-        checkFalse(stream.hasMessages());
-        checkTrue(stream.empty());
-
-        std::vector<ubyte> bytes1{ 0x3c }; // half of header
-        std::vector<ubyte> bytes2{ 0x0f, //2nd half fixed header
-                0x00, 0x03, 't', 'o', 'p', //topic name
-                0x00, 0x21, //message ID
-                'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', //payload
-                0xe0, 0x00, //header for disconnect
-                };
-        stream << bytes1;
-        checkFalse(stream.empty());
-        checkFalse(stream.hasMessages());
-
-        stream << bytes2;
-        checkFalse(stream.empty());
-        checkTrue(stream.hasMessages());
-
-        const auto publish = dynamic_cast<MqttPublish*>(stream.createMessage().get());
-        checkNotNull(publish);
-        checkFalse(stream.empty());
-        checkTrue(stream.hasMessages());
-
-        const auto disconnect = dynamic_cast<MqttDisconnect*>(stream.createMessage().get());
-        checkNotNull(disconnect);
-        checkTrue(stream.empty());
-    }
-};
-REGISTER_TEST(stream, TwoMqttInOnePacket)
+int readInto(MqttStream& stream, span<const ubyte> bytes) {
+    copy(bytes.cbegin(), bytes.cend(), stream.begin());
+    return bytes.size();
+}
 
 
-struct MqttInLoadsOfPackets: public TestCase {
-    virtual void test() override {
-        MqttStream stream(128);
-        checkFalse(stream.hasMessages());
-        checkTrue(stream.empty());
+TEST_CASE("MQTT in 2 packets") {
+    MqttServer<TestConnection> server;
+    TestConnection connection;
+    MqttStream stream{128};
 
-        for(int i = 0; i < 200; ++i) {
-            std::vector<ubyte> bytes{ 0x3c, 0x0f, // fixed header
-                    0x00, 0x03, 't', 'o', 'p', //topic name
-                    0x00, 0x21, //message ID
-                    'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', //payload
-                    };
-            stream << bytes;
-            checkFalse(stream.empty());
-            checkTrue(stream.hasMessages());
+    const auto subscribe = subscribeMsg("top", 33);
+    server.newMessage(connection, subscribe);
 
-            const auto publish = dynamic_cast<MqttPublish*>(stream.createMessage().get());
-            checkNotNull(publish);
-            checkTrue(stream.empty());
-            checkFalse(stream.hasMessages());
-        }
-    }
-};
-REGISTER_TEST(stream, MqttInLoadsOfPackets)
+    const vector<ubyte> bytes1{
+        0x3c, 15, //fixed header
+        0x00, 0x03, 't', 'o', 'p', //topic name
+        0x00, 0x21, //message ID
+        1, 2, 3 //first part of payload
+    };
+    const vector<ubyte> bytes2{4, 5, 6, 7, 8}; //2nd part of payload
+
+    const auto numBytes1 = readInto(stream, bytes1);
+    stream.handleMessages(numBytes1, server, connection);
+    REQUIRE(connection.payloads == vector<Payload>{});
+
+    const auto numBytes2 = readInto(stream, bytes2);
+    stream.handleMessages(numBytes2, server, connection);
+    REQUIRE(connection.payloads == (vector<Payload>{{1, 2, 3, 4, 5, 6, 7, 8}}));
+}
+
+
+TEST_CASE("Broken header and two messages") {
+    MqttServer<TestConnection> server;
+    TestConnection connection;
+    MqttStream stream{128};
+
+    connection.connected = true; //easier than sending conneciton packet
+
+    const auto subscribe = subscribeMsg("top", 33);
+    server.newMessage(connection, subscribe);
+
+    const vector<ubyte> bytes1{0x3c}; //half of header
+    const vector<ubyte> bytes2{
+        15, //2nd half of fixed header
+        0x00, 0x03, 't', 'o', 'p', //topic name
+        0x00, 0x21, //message ID
+        1, 2, 3, 4, 5, 6, 7, 8,
+        0xe0, 0, //header for disconnect
+    };
+
+    const auto numBytes1 = readInto(stream, bytes1);
+    stream.handleMessages(numBytes1, server, connection);
+    REQUIRE(connection.payloads == vector<Payload>{});
+    REQUIRE(connection.connected == true);
+
+    const auto numBytes2 = readInto(stream, bytes2);
+    stream.handleMessages(numBytes2, server, connection);
+    REQUIRE(connection.payloads == (vector<Payload>{{1, 2, 3, 4, 5, 6, 7, 8}}));
+    REQUIRE(connection.connected == false);
+}
+
+
+TEST_CASE("bug from rust impl") {
+    MqttServer<TestConnection> server;
+    TestConnection connection;
+    MqttStream stream{128};
+
+    connection.connected = true; //easier than sending conneciton packet
+
+    const vector<ubyte> bytes{48, 30, 0, 12, 108, 111, 97, 100, 116, 101, 115, 116, 47, 49, 54, 54};
+    const auto numBytes = readInto(stream, bytes);
+    stream.handleMessages(numBytes, server, connection);
+    REQUIRE(connection.payloads == vector<Payload>{});
+}
+
+
+TEST_CASE("bug header size") {
+    MqttServer<TestConnection> server;
+    TestConnection connection;
+    MqttStream stream{128};
+
+    const auto subscribe = subscribeMsg("top", 33);
+    server.newMessage(connection, subscribe);
+
+    const vector<ubyte> bytes1{
+        0x3c, 10, //fixed header
+        0x00, 0x03, 't', 'o', 'p', //topic name
+        0x00, 0x21, //message ID
+        1, 2, 3, //payload
+        0x3c, 15 //fixed header of the 2nd msg
+    };
+    const vector<ubyte> bytes2{
+        0x00, 0x03, 't', 'o', 'p', //topic name
+        0x00, 0x21, //message ID
+        1, 2, 3, 4, 5, 6, 7, 8 //payload
+   };
+
+    const auto numBytes1 = readInto(stream, bytes1);
+    stream.handleMessages(numBytes1, server, connection);
+    const auto numBytes2 = readInto(stream, bytes2);
+    stream.handleMessages(numBytes2, server, connection);
+
+    REQUIRE(connection.payloads == (vector<Payload>{{1, 2, 3}, {1, 2, 3, 4, 5, 6, 7, 8}}));
+}

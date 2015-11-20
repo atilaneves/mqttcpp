@@ -4,38 +4,90 @@
 #include "dtypes.hpp"
 #include "message.hpp"
 #include "broker.hpp"
+#include "Decerealiser.hpp"
+#include "gsl.h"
 #include <string>
 #include <vector>
 
 
-class MqttConnection: public MqttSubscriber {
-public:
-    virtual void newMessage(const std::string& topic, const std::vector<ubyte>& payload) override;
-    virtual void write(const std::vector<ubyte>& bytes) = 0;
-    virtual void disconnect() = 0;
-};
 
-
+template<typename C>
 class MqttServer {
 public:
 
-    void newConnection(MqttConnection& connection,
-                       const MqttConnect* connect);
-    void subscribe(MqttConnection& connection, ushort msgId,
-                   std::vector<std::string> topics);
-    void subscribe(MqttConnection& connection, ushort msgId,
-                   std::vector<MqttSubscribe::Topic> topics);
-    void unsubscribe(MqttConnection& connection);
-    void unsubscribe(MqttConnection& connection, ushort msgId,
-                     std::vector<std::string> topics);
-    void publish(const std::string& topic, const std::string& payload);
-    void publish(const std::string& topic, const std::vector<ubyte>& payload);
-    void ping(MqttConnection& connection);
-    void useCache(bool u) { _broker.useCache(u); }
+    MqttServer(bool useCache = false):
+        _broker{useCache}
+    {
+    }
+
+    void newMessage(C& connection, gsl::span<const ubyte> bytes) {
+
+        const auto type = getMessageType(bytes);
+        switch(type) {
+        case MqttType::CONNECT:
+            static ubyte connackOk[] = {32, 2, 0, 0};
+            //TODO: return something other than ok
+            connection.newMessage(connackOk);
+            break;
+
+        case MqttType::PINGREQ:
+            static ubyte pingResp[] = {0xd0, 0};
+            connection.newMessage(pingResp);
+            break;
+
+        case MqttType::PUBLISH:
+            {
+                _broker.publish(getPublishTopic(bytes), bytes);
+            }
+            break;
+
+        case MqttType::SUBSCRIBE:
+            {
+                Decerealiser dec{bytes};
+                const auto hdr = dec.create<MqttFixedHeader>();
+                dec.reset();
+                const auto msg = dec.create<MqttSubscribe>(hdr);
+
+                _broker.subscribe(connection, msg.topics);
+
+                std::vector<ubyte> suback{0x90, 3, 0, 0, 0};
+                suback[2] = msg.msgId >> 8;
+                suback[3] = msg.msgId & 0xff;
+                connection.newMessage(suback);
+            }
+            break;
+
+        case MqttType::UNSUBSCRIBE:
+            {
+                Decerealiser dec{bytes};
+                const auto hdr = dec.create<MqttFixedHeader>();
+                dec.reset();
+                const auto msg = dec.create<MqttUnsubscribe>(hdr);
+                _broker.unsubscribe(connection, msg.topics);
+                const std::vector<ubyte> unsuback{
+                    0xb0, 2,
+                        static_cast<ubyte>(msg.msgId >> 8), static_cast<ubyte>(msg.msgId & 0xff)};
+                connection.newMessage(unsuback);
+            }
+            break;
+
+        case MqttType::DISCONNECT:
+            _broker.unsubscribe(connection);
+            connection.disconnect();
+            break;
+
+        default:
+            std::cerr << "Unknown message type " << (int)type << ":" << std::endl;
+            std::cerr << "[";
+            for(const int b: bytes) std::cerr << b << ", ";
+            std::cerr << "]" << std::endl;
+            break;
+        }
+    }
 
 private:
-    MqttBroker _broker;
-};
 
+    MqttBroker<C> _broker;
+};
 
 #endif // SERVER_H_

@@ -2,8 +2,11 @@
 #include <stdexcept>
 #include <iostream>
 
+using namespace std;
+
 
 int main() {
+    cout << "C++ MQTT server" << endl;
     try {
         constexpr int port = 1883;
         MqttTcpServer server(port);

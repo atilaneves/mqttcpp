@@ -4,12 +4,15 @@
 
 using boost::asio::ip::tcp;
 
+using namespace gsl;
+
 MqttTcpServer::MqttTcpServer(int port):
     _ioService(),
     _signals(_ioService),
     _acceptor(_ioService, tcp::endpoint(tcp::v4(), port)),
     _connectionManager(),
-    _socket(_ioService)
+    _socket(_ioService),
+    _mqttServer{true}
 {
 
     _signals.add(SIGINT);
@@ -34,54 +37,18 @@ void MqttTcpServer::doAwaitStop() {
         });
 }
 
-namespace {
-class MqttTcpConnection: public Connection, public MqttConnection {
-public:
-    MqttTcpConnection(const MqttTcpConnection&) = delete;
-    MqttTcpConnection& operator=(const MqttTcpConnection&) = delete;
-
-    enum { BUFFER_SIZE = 1024 * 128};
-    explicit MqttTcpConnection(boost::asio::ip::tcp::socket socket,
-                               ConnectionManager& manager,
-                               MqttServer& server):
-        Connection(std::move(socket), manager),
-        _connected(true),
-        _mqttServer(server),
-        _stream(BUFFER_SIZE) {
-
-    }
-
-    virtual void handleRead(const std::vector<ubyte>& bytes) override {
-        if(_connected) _stream.read(_mqttServer, *this, bytes);
-    }
-
-    virtual void write(const std::vector<ubyte>& bytes) override {
-        if(_connected) writeBytes(bytes);
-    }
-
-    virtual void disconnect() override {
-        _connected = false;
-        stop();
-    }
-
-private:
-
-    bool _connected;
-    MqttServer& _mqttServer;
-    MqttStream _stream;
-
-};
-} //anonymous namespace
 
 void MqttTcpServer::doAccept() {
     _acceptor.async_accept(_socket,
                            [this](boost::system::error_code error) {
                                if(!_acceptor.is_open()) return;
                                if(!error) {
-                                   _connectionManager.start(std::make_shared<MqttTcpConnection>(
-                                                                std::move(_socket),
-                                                                _connectionManager,
-                                                                _mqttServer));
+                                   _connectionManager.start(
+                                       std::make_shared<Connection>(
+                                           std::move(_socket),
+                                           _connectionManager,
+                                           _mqttServer,
+                                           128 * 1024));
                                }
 
                                doAccept();

@@ -4,6 +4,7 @@
 #include <vector>
 #include <iostream>
 
+
 using namespace std;
 
 
@@ -62,11 +63,6 @@ void MqttFixedHeader::setRemainingSize(Cereal& cereal) const {
     for(auto b: digits) cereal.grain(b);
 }
 
-void MqttMessage::handle(MqttServer& server, MqttConnection& connection) const {
-    (void)server;
-    (void)connection;
-}
-
 
 MqttConnect::MqttConnect(MqttFixedHeader h):header(h) { }
 
@@ -90,10 +86,6 @@ void MqttConnect::cerealise(Cereal& cereal) {
     if(hasWill) cereal.grain(willMessage);
     if(hasUserName) cereal.grain(userName);
     if(hasPassword) cereal.grain(password);
-}
-
-void MqttConnect::handle(MqttServer& server, MqttConnection& connection) const {
-    server.newConnection(connection, this);
 }
 
 
@@ -155,19 +147,10 @@ void MqttPublish::cerealise(Cereal& cereal) {
     for(auto& b: payload) cereal.grain(b);
 }
 
-void MqttPublish::handle(MqttServer& server, MqttConnection& connection) const {
-    (void)connection;
-    server.publish(topic, payload);
-}
-
 
 MqttSubscribe::MqttSubscribe(MqttFixedHeader h):
     header(h), msgId(), topics() {
 
-}
-
-void MqttSubscribe::handle(MqttServer& server, MqttConnection& connection) const {
-    server.subscribe(connection, msgId, topics);
 }
 
 void MqttSubscribe::Topic::cerealise(Cereal& cereal) {
@@ -203,10 +186,6 @@ MqttUnsubscribe::MqttUnsubscribe(MqttFixedHeader h):header(h) {
 
 }
 
-void MqttUnsubscribe::handle(MqttServer& server, MqttConnection& connection) const {
-    server.unsubscribe(connection, msgId, topics);
-}
-
 void MqttUnsubscribe::cerealise(Cereal& cereal) {
     cereal.grain(header);
     cereal.grain(msgId);
@@ -229,16 +208,23 @@ void MqttUnsuback::cerealise(Cereal& cereal) {
     cereal.grain(msgId);
 }
 
-
-void MqttDisconnect::handle(MqttServer& server, MqttConnection& connection) const {
-    server.unsubscribe(connection);
-    connection.disconnect();
+MqttType getMessageType(gsl::span<const ubyte> bytes) {
+    return static_cast<MqttType>((bytes[0] >> 4));
 }
 
-void MqttPingReq::handle(MqttServer& server, MqttConnection& connection) const {
-    server.ping(connection);
-}
 
-std::vector<ubyte> MqttPingResp::encode() const {
-    return std::vector<ubyte>{0xd0, 0x00};
+gsl::cstring_span<> getPublishTopic(gsl::span<const ubyte> bytes) {
+    if(bytes.size() < 4) {
+        cerr << "Error: Can't get topic from a message of only " << bytes.size() << " bytes:\n";
+        cerr << "[";
+        for(const int b: bytes) {
+            cerr << b << ", ";
+        }
+        cerr << "]" << endl;
+        return {};
+    }
+    //won't work if there's a msg id and the size is < 128 bytes
+    const auto topicLen = (bytes[2] << 8) + bytes[3];
+    const auto charPtr = reinterpret_cast<const char*>(&bytes[4]);
+    return {charPtr, topicLen};
 }

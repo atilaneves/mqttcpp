@@ -12,7 +12,7 @@ public:
     MqttTcpServer(const MqttTcpServer&) = delete;
     MqttTcpServer& operator=(const MqttTcpServer&) = delete;
 
-    explicit MqttTcpServer(int port1);
+    explicit MqttTcpServer(int port);
 
     void run();
 
@@ -23,7 +23,7 @@ private:
     boost::asio::ip::tcp::acceptor _acceptor;
     ConnectionManager _connectionManager;
     boost::asio::ip::tcp::socket _socket;
-    MqttServer _mqttServer;
+    MqttServer<Connection> _mqttServer;
 
     void doAccept();
     void doAwaitStop();

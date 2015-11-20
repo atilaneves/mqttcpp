@@ -1,355 +1,265 @@
-#include "unit_thread.hpp"
+#include "catch.hpp"
 #include "server.hpp"
-#include "factory.hpp"
+#include "TestConnection.hpp"
+#include "gsl.h"
+#include <sstream>
 
 
-struct TestMqttConnection: public MqttConnection {
-    TestMqttConnection(std::vector<ubyte> bytes):
-        connected(false),
-        connect(dynamic_cast<MqttConnect*>(MqttFactory::create(bytes).release())) {
-    }
-
-    TestMqttConnection(std::unique_ptr<MqttConnect>&& c):
-        connected(true), connect(std::move(c)) {
-    }
-
-    void write(const std::vector<ubyte>& bytes) override {
-        lastMsg = MqttFactory::create(bytes);
-    }
-
-    void newMessage(const std::string& topic, const std::vector<ubyte>& payload) override {
-        (void)topic;
-        payloads.emplace_back(payload.begin(), payload.end());
-    }
-
-    void disconnect() override { connected = false; }
-
-    std::unique_ptr<MqttMessage> lastMsg;
-    std::vector<std::string> payloads;
-    bool connected;
-    std::unique_ptr<MqttConnect> connect;
-};
+using namespace std;
+using namespace gsl;
 
 
-struct Connect: public TestCase {
-    void test() override {
-        MqttServer server;
-        std::vector<ubyte> bytes{ 0x10, 0x2a, //fixed header
-                0x00, 0x06, 'M', 'Q', 'I', 's', 'd', 'p', //protocol name
-                0x03, //protocol version
-                0xcc, //connection flags 1100111x username, pw, !wr, w(01), w, !c, x
-                0x00, 0x0a, //keepalive of 10
-                0x00, 0x03, 'c', 'i', 'd', //client ID
-                0x00, 0x04, 'w', 'i', 'l', 'l', //will topic
-                0x00, 0x04, 'w', 'm', 's', 'g', //will msg
-                0x00, 0x07, 'g', 'l', 'i', 'f', 't', 'e', 'l', //username
-                0x00, 0x02, 'p', 'w', //password
-                };
+static vector<ubyte> connectionMsgBytes() {
+    return {0x10, 0x2a, //fixed header
+            0x00, 0x06, 'M', 'Q', 'I', 's', 'd', 'p', //protocol name
+            0x03, //protocol version
+            0xcc, //connection flags 1100111x username, pw, !wr, w(01), w, !c, x
+            0x00, 0x0a, //keepalive of 10
+            0x00, 0x03, 'c', 'i', 'd', //client ID
+            0x00, 0x04, 'w', 'i', 'l', 'l', //will topic
+            0x00, 0x04, 'w', 'm', 's', 'g', //will msg
+            0x00, 0x07, 'g', 'l', 'i', 'f', 't', 'e', 'l', //username
+            0x00, 0x02, 'p', 'w', //password
+            };
+}
 
-        TestMqttConnection connection(bytes);
-        server.newConnection(connection, connection.connect.get());
-        const auto connack = dynamic_cast<MqttConnack*>(connection.lastMsg.get());
-        checkNotNull(connack);
-        checkEqual((int)connack->code, (int)MqttConnack::Code::ACCEPTED);
-    }
-};
-REGISTER_TEST(server, Connect)
+TEST_CASE("connect") {
+    MqttServer<TestConnection> server;
+    TestConnection connection;
 
-struct ConnectBigId: public TestCase {
-    void test() override {
-        MqttServer server;
-        std::vector<ubyte> bytes{ 0x10, 0x3f, //fixed header
-                0x00, 0x06, 'M', 'Q', 'I', 's', 'd', 'p', //protocol name
-                0x03, //protocol version
-                0xcc, //connection flags 1100111x username, pw, !wr, w(01), w, !c, x
-                0x00, 0x0a, //keepalive of 10
-                0x00, 0x18, 'c', 'i', 'd', 'd', 'd', 'd', 'd', 'd', 'd', 'd', 'd', 'd',
-                'd', 'd', 'd', 'd', 'd', 'd', 'd', 'd', 'd', 'd', 'd', 'd', //24 char client id
-                0x00, 0x04, 'w', 'i', 'l', 'l', //will topic
-                0x00, 0x04, 'w', 'm', 's', 'g', //will msg
-                0x00, 0x07, 'g', 'l', 'i', 'f', 't', 'e', 'l', //username
-                0x00, 0x02, 'p', 'w', //password
-                };
-
-        TestMqttConnection connection(bytes);
-        server.newConnection(connection, connection.connect.get());
-        const auto connack = dynamic_cast<MqttConnack*>(connection.lastMsg.get());
-        checkNotNull(connack);
-        checkEqual((int)connack->code, (int)MqttConnack::Code::BAD_ID);
-    }
-};
-REGISTER_TEST(server, ConnectBigId)
-
-struct ConnectSmallId: public TestCase {
-    void test() override {
-        MqttServer server;
-        std::vector<ubyte> bytes{ 0x10, 0x27, //fixed header
-                0x00, 0x06, 'M', 'Q', 'I', 's', 'd', 'p', //protocol name
-                0x03, //protocol version
-                0xcc, //connection flags 1100111x username, pw, !wr, w(01), w, !c, x
-                0x00, 0x0a, //keepalive of 10
-                0x00, 0x00, //no client id
-                0x00, 0x04, 'w', 'i', 'l', 'l', //will topic
-                0x00, 0x04, 'w', 'm', 's', 'g', //will msg
-                0x00, 0x07, 'g', 'l', 'i', 'f', 't', 'e', 'l', //username
-                0x00, 0x02, 'p', 'w', //password
-                };
-
-        TestMqttConnection connection(bytes);
-        server.newConnection(connection, connection.connect.get());
-        const auto connack = dynamic_cast<MqttConnack*>(connection.lastMsg.get());
-        checkNotNull(connack);
-        checkEqual((int)connack->code, (int)MqttConnack::Code::BAD_ID);
-    }
-};
-REGISTER_TEST(server, ConnectSmallId)
-
-struct Subscribe: public TestCase {
-    void test() override {
-        MqttServer server;
-        std::vector<ubyte> bytes{ 0x10, 0x2a, //fixed header
-                0x00, 0x06, 'M', 'Q', 'I', 's', 'd', 'p', //protocol name
-                0x03, //protocol version
-                0xcc, //connection flags 1100111x username, pw, !wr, w(01), w, !c, x
-                0x00, 0x0a, //keepalive of 10
-                0x00, 0x03, 'c', 'i', 'd', //client ID
-                0x00, 0x04, 'w', 'i', 'l', 'l', //will topic
-                0x00, 0x04, 'w', 'm', 's', 'g', //will msg
-                0x00, 0x07, 'g', 'l', 'i', 'f', 't', 'e', 'l', //username
-                0x00, 0x02, 'p', 'w', //password
-                };
-
-        TestMqttConnection connection(bytes);
-        server.newConnection(connection, connection.connect.get());
-
-        server.publish("foo/bar/baz", "interesting stuff");
-        checkEqual(connection.payloads, std::vector<std::string>({}));
-
-        server.subscribe(connection, 42, std::vector<std::string>({"foo/bar/+"}));
-        const auto suback = dynamic_cast<MqttSuback*>(connection.lastMsg.get());
-        checkNotNull(suback);
-        checkEqual(suback->msgId, 42);
-        checkEqual(suback->qos, std::vector<ubyte>({0}));
-
-        server.publish("foo/bar/baz", "interesting stuff");
-        server.publish("foo/boogagoo", "oh noes!!!");
-        checkEqual(connection.payloads, std::vector<std::string>({"interesting stuff"}));
-
-        server.unsubscribe(connection);
-        server.publish("foo/bar/baz", "interesting stuff");
-        server.publish("foo/boogagoo", "oh noes!!!");
-        checkEqual(connection.payloads,
-                   std::vector<std::string>({"interesting stuff"})); //shouldn't have changed
-    }
-};
-REGISTER_TEST(server, Subscribe)
+    const auto bytes = connectionMsgBytes();
+    server.newMessage(connection, bytes);
+    REQUIRE(connection.connected == true);
+    REQUIRE(connection.connectionCode == MqttConnack::Code::ACCEPTED);
+}
 
 
-struct SubscribeWithMessage: public TestCase {
-    void test() override {
-        MqttServer server;
-        std::vector<ubyte> bytes{ 0x10, 0x2a, //fixed header
-                0x00, 0x06, 'M', 'Q', 'I', 's', 'd', 'p', //protocol name
-                0x03, //protocol version
-                0xcc, //connection flags 1100111x username, pw, !wr, w(01), w, !c, x
-                0x00, 0x0a, //keepalive of 10
-                0x00, 0x03, 'c', 'i', 'd', //client ID
-                0x00, 0x04, 'w', 'i', 'l', 'l', //will topic
-                0x00, 0x04, 'w', 'm', 's', 'g', //will msg
-                0x00, 0x07, 'g', 'l', 'i', 'f', 't', 'e', 'l', //username
-                0x00, 0x02, 'p', 'w', //password
-                };
+vector<ubyte> publishMsg(const std::string& topic, ushort msgId, initializer_list<ubyte> payload) {
+    vector<ubyte> msg{0x3c}; //fixed header sans remaining length
+    const auto remainingLength = topic.size() + 2 /*topic len*/+ 2 /*msgIdLen*/ + payload.size();
+    msg.emplace_back(remainingLength); //not strictly correct, but ok for testing
 
-        TestMqttConnection connection(bytes);
-        server.newConnection(connection, connection.connect.get());
+    msg.emplace_back(topic.size() >> 8);
+    msg.emplace_back(topic.size() & 0xff);
+    copy(topic.cbegin(), topic.cend(), back_inserter(msg));
 
-        server.publish("foo/bar/baz", "interesting stuff");
-        checkEqual(connection.payloads, std::vector<std::string>({}));
+    msg.emplace_back(msgId >> 8);
+    msg.emplace_back(msgId & 0xff);
 
-        bytes = std::vector<ubyte>{ 0x8c, 0x13, //fixed header
-                                    0x00, 0x21, //message ID
-                                    0x00, 0x05, 'f', 'i', 'r', 's', 't',
-                                    0x01, //qos
-                                    0x00, 0x06, 's', 'e', 'c', 'o', 'n', 'd',
-                                    0x02, //qos
-        };
+    copy(payload.begin(), payload.end(), back_inserter(msg));
+    return msg;
+}
 
-        const auto msg = MqttFactory::create(bytes);
-        checkNotNull(msg.get());
-        msg->handle(server, connection); //subscribe
-        const auto suback = dynamic_cast<MqttSuback*>(connection.lastMsg.get());
-        checkNotNull(suback);
-        checkEqual(suback->msgId, 33);
-        checkEqual(suback->qos, std::vector<ubyte>({1, 2}));
-
-        bytes ={ 0x3c, 0x0d, //fixed header
-                0x00, 0x05, 'f', 'i', 'r', 's', 't',//topic name
-                0x00, 0x21, //message ID
-                'b', 'o', 'r', 'g', //payload
-                };
-        MqttFactory::create(bytes)->handle(server, connection); //publish
-
-        bytes = { 0x3c, 0x0d, //fixed header
-                0x00, 0x06, 's', 'e', 'c', 'o', 'n', 'd',//topic name
-                0x00, 0x21, //message ID
-                'f', 'o', 'o',//payload
-                };
-        MqttFactory::create(bytes)->handle(server, connection); //publish
-
-        bytes = { 0x3c, 0x0c, //fixed header
+TEST_CASE("publishMsg") {
+    REQUIRE(publishMsg("third", 0x4321, {2, 4, 6}) ==
+            (vector<ubyte>{
+                0x3c, 0x0c, //fixed header
                 0x00, 0x05, 't', 'h', 'i', 'r', 'd',//topic name
-                0x00, 0x21, //message ID
-                'f', 'o', 'o',//payload
-                };
-        MqttFactory::create(bytes)->handle(server, connection); //publish
+                0x43, 0x21, //message ID (network byte order)
+                2, 4, 6, //payload
+            }));
+}
+
+vector<ubyte> subscribeMsgBytes() {
+    return
+    {
+        0x8b, 0x13, //fixed header
+        0x33, 0x44, //message ID
+        0x00, 0x05, 'f', 'i', 'r', 's', 't',
+        0x01, //qos
+        0x00, 0x06, 's', 'e', 'c', 'o', 'n', 'd',
+        0x02, //qos
+    };
+}
+
+static vector<ubyte> subscribeMsg(const std::string& topic, ushort msgId) {
+    vector<ubyte> msg{0x8b}; //fixed header sans remaining length
+    const auto remainingLength = topic.size() + 2 /*topic len*/ + 2 /*msgId*/ + 1 /*qos*/;
+    msg.emplace_back(remainingLength);
+
+    msg.emplace_back(msgId >> 8);
+    msg.emplace_back(msgId & 0xff);
+
+    msg.emplace_back(topic.size() >> 8);
+    msg.emplace_back(topic.size() & 0xff);
+    copy(topic.cbegin(), topic.cend(), back_inserter(msg));
+
+    msg.emplace_back(0); //qos
+
+    return msg;
+}
 
 
-        checkEqual(connection.payloads, std::vector<std::string>({"borg", "foo"}));
+//TODO: check for bad connection
+TEST_CASE("subscribe bytes") {
+    const auto publish1 = publishMsg("first", 0x21, {1, 2, 3, 4});
+    const auto publish2 = publishMsg("second", 0x33, {9, 8, 7});
+    const auto publish3 = publishMsg("third", 0x44, {2, 4, 6});
+    const auto subscribe = subscribeMsgBytes();
+
+    MqttServer<TestConnection> server;
+    TestConnection connection;
+
+    server.newMessage(connection, publish1);
+    server.newMessage(connection, publish2);
+    server.newMessage(connection, publish3);
+    REQUIRE(connection.payloads == vector<Payload>{});
+
+    server.newMessage(connection, subscribe);
+    REQUIRE(connection.lastMsg == (vector<ubyte>{0x90, 3, 0x33, 0x44, 0}));
+
+    server.newMessage(connection, publish1);
+    server.newMessage(connection, publish2);
+    server.newMessage(connection, publish3);
+    REQUIRE(connection.payloads == (vector<Payload>{{1, 2, 3, 4}, {9, 8, 7}}));
+}
+
+TEST_CASE("ping bytes") {
+    MqttServer<TestConnection> server;
+    TestConnection connection;
+
+    const vector<ubyte> ping{0xc0, 0};
+    server.newMessage(connection, ping);
+    REQUIRE(connection.lastMsg == (vector<ubyte>{0xd0, 0}));
+}
+
+
+TEST_CASE("unsubscribe topic bytes") {
+    const auto publish1 = publishMsg("first", 0x21, {1, 2, 3, 4});
+    const auto publish2 = publishMsg("second", 0x33, {9, 8, 7});
+    const auto publish3 = publishMsg("third", 0x44, {2, 4, 6});
+    const auto subscribe = subscribeMsgBytes();
+
+    const vector<ubyte> unsubscribe1
+    {
+        0xa2, 10, //fixed header
+        0x43, 0x21, //msg id
+        0x00, 0x06, 's', 'e', 'c', 'o', 'n', 'd' // topic
+    };
+
+    MqttServer<TestConnection> server;
+    TestConnection connection;
+
+    server.newMessage(connection, subscribe);
+    server.newMessage(connection, publish1);
+    server.newMessage(connection, publish2);
+    server.newMessage(connection, publish3);
+    REQUIRE(connection.payloads == (vector<Payload>{{1, 2, 3, 4}, {9, 8, 7}}));
+
+    server.newMessage(connection, unsubscribe1);
+    //unsuback
+    REQUIRE(connection.lastMsg == (vector<ubyte>{0xb0, 2, 0x43, 0x21}));
+
+    server.newMessage(connection, publish1);
+    server.newMessage(connection, publish2);
+    server.newMessage(connection, publish3);
+    REQUIRE(connection.payloads == (vector<Payload>{{1, 2, 3, 4}, {9, 8, 7}, {1, 2, 3, 4}}));
+
+    const vector<ubyte> unsubscribe2{
+        0xa2, 9, //fixed header
+        0x12, 0x34, //msg id
+        0x00, 0x05, 'f', 'i', 'r', 's', 't',
+    };
+
+    //unsuback
+    server.newMessage(connection, unsubscribe2);
+    REQUIRE(connection.lastMsg == (vector<ubyte>{0xb0, 2, 0x12, 0x34}));
+
+    server.newMessage(connection, publish1);
+    server.newMessage(connection, publish2);
+    server.newMessage(connection, publish3);
+    REQUIRE(connection.payloads == (vector<Payload>{{1, 2, 3, 4}, {9, 8, 7}, {1, 2, 3, 4}}));
+
+}
+
+TEST_CASE("unsubscribe all bytes") {
+    const auto publish1 = publishMsg("first", 0x21, {1, 2, 3, 4});
+    const auto publish2 = publishMsg("second", 0x33, {9, 8, 7});
+    const auto publish3 = publishMsg("third", 0x44, {2, 4, 6});
+    const auto subscribe = subscribeMsgBytes();
+    const vector<ubyte> disconnect{0xe0, 0};
+
+    MqttServer<TestConnection> server;
+    TestConnection connection;
+
+    const auto bytes = connectionMsgBytes();
+    server.newMessage(connection, bytes);
+    REQUIRE(connection.connected == true);
+
+    server.newMessage(connection, subscribe);
+    server.newMessage(connection, publish1);
+    server.newMessage(connection, publish2);
+    server.newMessage(connection, publish3);
+    REQUIRE(connection.payloads == (vector<Payload>{{1, 2, 3, 4}, {9, 8, 7}}));
+
+    server.newMessage(connection, disconnect);
+    REQUIRE(connection.connected == false);
+
+    server.newMessage(connection, publish1);
+    server.newMessage(connection, publish2);
+    server.newMessage(connection, publish3);
+    REQUIRE(connection.payloads == (vector<Payload>{{1, 2, 3, 4}, {9, 8, 7}}));
+}
+
+
+TEST_CASE("subscribe wildcard bytes") {
+    MqttServer<TestConnection> server;
+
+    constexpr auto numPairs = 2;
+    constexpr auto numWilds = 2;
+    vector<TestConnection> reqs(numPairs);
+    vector<TestConnection> reps(numPairs);
+    vector<TestConnection> wlds(numWilds);
+
+    for(auto i = 0u; i < wlds.size(); ++i) {
+        const auto subscribe = subscribeMsg("pingtest/0/#", i * 20 + 1);
+        server.newMessage(wlds[i], subscribe);
     }
-};
-REGISTER_TEST(server, SubscribeWithMessage)
 
-struct Unsubscribe: public TestCase {
-    void test() override {
-        MqttServer server;
-        std::vector<ubyte> bytes{ 0x10, 0x2a, //fixed header
-                0x00, 0x06, 'M', 'Q', 'I', 's', 'd', 'p', //protocol name
-                0x03, //protocol version
-                0xcc, //connection flags 1100111x username, pw, !wr, w(01), w, !c, x
-                0x00, 0x0a, //keepalive of 10
-                0x00, 0x03, 'c', 'i', 'd', //client ID
-                0x00, 0x04, 'w', 'i', 'l', 'l', //will topic
-                0x00, 0x04, 'w', 'm', 's', 'g', //will msg
-                0x00, 0x07, 'g', 'l', 'i', 'f', 't', 'e', 'l', //username
-                0x00, 0x02, 'p', 'w', //password
-                };
-
-        TestMqttConnection connection(bytes);
-        server.newConnection(connection, connection.connect.get());
-
-        server.subscribe(connection, 42, std::vector<std::string>({"foo/bar/+"}));
-        const auto suback = dynamic_cast<MqttSuback*>(connection.lastMsg.get());
-        checkNotNull(suback);
-
-        server.publish("foo/bar/baz", "interesting stuff");
-        server.publish("foo/boogagoo", "oh noes!!!");
-        checkEqual(connection.payloads, std::vector<std::string>({"interesting stuff"}));
-
-        server.unsubscribe(connection, 2, std::vector<std::string>({"boo"})); //doesn't exist, so no effect
-        const auto unsuback1 = dynamic_cast<MqttUnsuback*>(connection.lastMsg.get());
-        checkNotNull(unsuback1);
-        checkEqual(unsuback1->msgId, 2);
-
-        server.publish("foo/bar/baz", "interesting stuff");
-        server.publish("foo/boogagoo", "oh noes!!!");
-        checkEqual(connection.payloads, std::vector<std::string>({"interesting stuff", "interesting stuff"}));
-
-        server.unsubscribe(connection, 3, std::vector<std::string>({"foo/bar/+"}));
-        const auto unsuback2 = dynamic_cast<MqttUnsuback*>(connection.lastMsg.get());
-        checkNotNull(unsuback2);
-        checkEqual(unsuback2->msgId, 3);
-
-        server.publish("foo/bar/baz", "interesting stuff");
-        server.publish("foo/boogagoo", "oh noes!!!");
-        checkEqual(connection.payloads,
-                   std::vector<std::string>({"interesting stuff", "interesting stuff"})); //shouldn't have changed
+    for(auto i = 0u; i < reqs.size(); ++i) {
+        stringstream stream;
+        stream << "pingtest/" << i << "/request";
+        const auto subscribe = subscribeMsg(stream.str(), i * 2);
+        server.newMessage(reqs[i], subscribe);
     }
-};
-REGISTER_TEST(server, Unsubscribe)
 
-
-struct UnsubscribeHandle: public TestCase {
-    void test() override {
-        MqttServer server;
-        std::vector<ubyte> bytes{ 0x10, 0x2a, //fixed header
-                0x00, 0x06, 'M', 'Q', 'I', 's', 'd', 'p', //protocol name
-                0x03, //protocol version
-                0xcc, //connection flags 1100111x username, pw, !wr, w(01), w, !c, x
-                0x00, 0x0a, //keepalive of 10
-                0x00, 0x03, 'c', 'i', 'd', //client ID
-                0x00, 0x04, 'w', 'i', 'l', 'l', //will topic
-                0x00, 0x04, 'w', 'm', 's', 'g', //will msg
-                0x00, 0x07, 'g', 'l', 'i', 'f', 't', 'e', 'l', //username
-                0x00, 0x02, 'p', 'w', //password
-                };
-
-        TestMqttConnection connection(bytes);
-        server.newConnection(connection, connection.connect.get());
-        server.subscribe(connection, 42, std::vector<std::string>({"foo/bar/+"}));
-
-        server.publish("foo/bar/baz", "interesting stuff");
-        server.publish("foo/boogagoo", "oh noes!!!");
-        checkEqual(connection.payloads, std::vector<std::string>({"interesting stuff"}));
-
-        bytes = { 0xa2, 0x0d, //fixed header
-                0x00, 0x21, //message ID
-                0x00, 0x09, 'f', 'o', 'o', '/', 'b', 'a', 'r', '/', '+',
-                };
-
-        auto msg = MqttFactory::create(bytes);
-        checkNotNull(msg.get());
-        msg->handle(server, connection); //unsubscribe
-        const auto unsuback = dynamic_cast<MqttUnsuback*>(connection.lastMsg.get());
-        checkNotNull(unsuback);
-        checkEqual(unsuback->msgId, 33);
-
-        server.publish("foo/bar/baz", "interesting stuff");
-        server.publish("foo/boogagoo", "oh noes!!!");
-        checkEqual(connection.payloads,
-                   std::vector<std::string>({"interesting stuff"})); //shouldn't have changed
+    for(auto i = 0u; i < reps.size(); ++i) {
+        stringstream stream;
+        stream << "pingtest/" << i << "/reply";
+        const auto subscribe = subscribeMsg(stream.str(), i * 2);
+        server.newMessage(reps[i], subscribe);
     }
-};
-REGISTER_TEST(server, UnsubscribeHandle)
 
-
-struct Ping: public TestCase {
-    void test() override {
-        MqttServer server;
-        std::vector<ubyte> bytes{ 0x10, 0x2a, //fixed header
-                0x00, 0x06, 'M', 'Q', 'I', 's', 'd', 'p', //protocol name
-                0x03, //protocol version
-                0xcc, //connection flags 1100111x username, pw, !wr, w(01), w, !c, x
-                0x00, 0x0a, //keepalive of 10
-                0x00, 0x03, 'c', 'i', 'd', //client ID
-                0x00, 0x04, 'w', 'i', 'l', 'l', //will topic
-                0x00, 0x04, 'w', 'm', 's', 'g', //will msg
-                0x00, 0x07, 'g', 'l', 'i', 'f', 't', 'e', 'l', //username
-                0x00, 0x02, 'p', 'w', //password
-                };
-
-        TestMqttConnection connection(bytes);
-        server.newConnection(connection, connection.connect.get());
-
-        server.ping(connection);
-        const auto pingResp = dynamic_cast<MqttPingResp*>(connection.lastMsg.get());
-        checkNotNull(pingResp);
+    constexpr auto numMessages = 2;
+    for(int i = 0; i < numPairs; ++i) {
+        for(int j = 0; j < numMessages; ++j) {
+            {
+                stringstream stream;
+                stream << "pingtest/" << i << "/request";
+                const auto msg = publishMsg(stream.str(), j, {0, 1, 2, 3});
+                server.newMessage(reqs[0], msg);
+            }
+            {
+                stringstream stream;
+                stream << "pingtest/" << i << "/reply";
+                const auto msg = publishMsg(stream.str(), j * 2, {9, 8, 7});
+                server.newMessage(reps[0], msg);
+            }
+        }
     }
-};
-REGISTER_TEST(server, Ping)
 
-
-struct PingWithMessage: public TestCase {
-    void test() override {
-        MqttServer server;
-        std::vector<ubyte> bytes{ 0x10, 0x2a, //fixed header
-                0x00, 0x06, 'M', 'Q', 'I', 's', 'd', 'p', //protocol name
-                0x03, //protocol version
-                0xcc, //connection flags 1100111x username, pw, !wr, w(01), w, !c, x
-                0x00, 0x0a, //keepalive of 10
-                0x00, 0x03, 'c', 'i', 'd', //client ID
-                0x00, 0x04, 'w', 'i', 'l', 'l', //will topic
-                0x00, 0x04, 'w', 'm', 's', 'g', //will msg
-                0x00, 0x07, 'g', 'l', 'i', 'f', 't', 'e', 'l', //username
-                0x00, 0x02, 'p', 'w', //password
-                };
-
-        TestMqttConnection connection(bytes);
-        server.newConnection(connection, connection.connect.get());
-
-        const auto msg = MqttFactory::create(std::vector<ubyte>{0xc0, 0x00}); //ping request
-        msg->handle(server, connection);
-        const auto pingResp = dynamic_cast<MqttPingResp*>(connection.lastMsg.get());
-        checkNotNull(pingResp);
+    for(auto& req: reqs) {
+        vector<Payload> expected(numMessages, {0, 1, 2, 3});
+        REQUIRE(req.payloads == expected);
     }
-};
-REGISTER_TEST(server, PingWithMessage)
+
+    for(auto& rep: reps) {
+        vector<Payload> expected(numMessages, {9, 8, 7});
+        REQUIRE(rep.payloads == expected);
+    }
+
+    for(auto& wld: wlds) {
+        vector<Payload> expected{{0, 1, 2, 3}, {9, 8, 7}, {0, 1, 2, 3}, {9, 8, 7}};
+        REQUIRE(wld.payloads == expected);
+    }
+}
