@@ -38,13 +38,16 @@ file(GLOB CEREAL_SRC cereal/src/*.cpp)
 add_library(cereal STATIC ${CEREAL_SRC})
 
 
-file(GLOB SRC src/*.cpp src/boost/*.cpp)
+file(GLOB SRC src/*.cpp)
 include_directories(src cereal/src src/boost gsl/include)
-add_library(mqttcpp STATIC ${SRC})
-target_link_libraries(mqttcpp cereal)
+add_library(mqttpure STATIC ${SRC})
+target_link_libraries(mqttpure cereal)
 
-add_executable(mqtt main.cpp)
-target_link_libraries(mqtt mqttcpp ${Boost_LIBRARIES})
+
+
+file(GLOB MAIN_SRC main.cpp src/boost/*.cpp)
+add_executable(mqtt ${MAIN_SRC})
+target_link_libraries(mqtt mqttpure ${Boost_LIBRARIES})
 if(NOT WIN32)
   target_link_libraries(mqtt pthread)
 endif()
@@ -66,6 +69,6 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     )
 
   add_executable(ut ${TEST_SRCS})
-  target_link_libraries(ut mqttcpp)
+  target_link_libraries(ut mqttpure)
 
 endif()
