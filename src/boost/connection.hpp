@@ -2,6 +2,7 @@
 #define CONNECTION_H_
 
 #include "dtypes.hpp"
+#include "server.hpp"
 #include "stream.hpp"
 #include <boost/asio.hpp>
 
@@ -15,9 +16,10 @@ public:
     Connection(const Connection&) = delete;
     Connection& operator=(const Connection&) = delete;
 
-    explicit Connection(boost::asio::ip::tcp::socket socket,
-                        ConnectionManager& manager,
-                        int numStreamBytes);
+    Connection(boost::asio::ip::tcp::socket socket,
+               ConnectionManager& manager,
+               MqttServer<Connection>& server,
+               int numStreamBytes);
 
     void start();
     void stop();
@@ -30,7 +32,8 @@ private:
 
     boost::asio::ip::tcp::socket _socket;
     ConnectionManager& _connectionManager;
-    bool connected;
+    MqttServer<Connection>& _server;
+    bool connected{true};
     MqttStream _stream;
     std::vector<ubyte> _buffer;
 

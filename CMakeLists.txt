@@ -43,11 +43,11 @@ include_directories(src cereal/src src/boost gsl/include)
 add_library(mqttcpp STATIC ${SRC})
 target_link_libraries(mqttcpp cereal)
 
-# add_executable(mqtt main.cpp)
-# target_link_libraries(mqtt mqttcpp ${Boost_LIBRARIES})
-# if(NOT WIN32)
-#   target_link_libraries(mqtt pthread)
-# endif()
+add_executable(mqtt main.cpp)
+target_link_libraries(mqtt mqttcpp ${Boost_LIBRARIES})
+if(NOT WIN32)
+  target_link_libraries(mqtt pthread)
+endif()
 
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")

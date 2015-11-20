@@ -46,6 +46,7 @@ void MqttTcpServer::doAccept() {
                                        std::make_shared<Connection>(
                                            std::move(_socket),
                                            _connectionManager,
+                                           _mqttServer,
                                            128 * 1024));
                                }
 

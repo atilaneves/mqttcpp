@@ -7,9 +7,11 @@ using namespace gsl;
 
 Connection::Connection(boost::asio::ip::tcp::socket socket,
                        ConnectionManager& manager,
+                       MqttServer<Connection>& server,
                        int numStreamBytes):
     _socket(std::move(socket)),
     _connectionManager(manager),
+    _server{server},
     _stream{numStreamBytes}
 {
 }
@@ -25,12 +27,14 @@ void Connection::stop() {
 void Connection::doRead() {
     auto self(shared_from_this());
     _socket.async_read_some(boost::asio::buffer(_stream.readableData(), _stream.readableDataSize()),
-        [this, self](boost::system::error_code error, std::size_t ) {
+        [this, self](boost::system::error_code error, std::size_t numBytes) {
             if(!error) {
-                cerr << "Error reading from TCP socket" << endl;
+                _stream.handleMessages(numBytes, _server, *this);
                 doRead();
             } else if(error != boost::asio::error::operation_aborted) {
                 _connectionManager.stop(shared_from_this());
+            } else {
+                cerr << "Error reading from TCP socket" << endl;
             }
         });
 }
