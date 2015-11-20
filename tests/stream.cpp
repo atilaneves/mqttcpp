@@ -2,6 +2,7 @@
 #include "stream.hpp"
 #include "gsl.h"
 #include <sstream>
+#include <algorithm>
 
 
 using namespace std;
@@ -60,6 +61,12 @@ static vector<ubyte> subscribeMsg(const std::string& topic, ushort msgId) {
 }
 
 
+int readInto(MqttStream& stream, span<const ubyte> bytes) {
+    copy(bytes.cbegin(), bytes.cend(), stream.begin());
+    return bytes.size();
+}
+
+
 TEST_CASE("MQTT in 2 packets") {
     MqttServer<TestConnection> server;
     TestConnection connection;
@@ -69,18 +76,18 @@ TEST_CASE("MQTT in 2 packets") {
     server.newMessage(connection, subscribe);
 
     const vector<ubyte> bytes1{
-        0x3c, 0x0f, //fixed header
+        0x3c, 15, //fixed header
         0x00, 0x03, 't', 'o', 'p', //topic name
         0x00, 0x21, //message ID
         1, 2, 3 //first part of payload
     };
 
-    stream << bytes1;
-    stream.handleMessages(server, connection);
+    const auto numBytes1 = readInto(stream, bytes1);
+    stream.handleMessages(numBytes1, server, connection);
     REQUIRE(connection.payloads == vector<Payload>{});
 
-    const vector<ubyte> bytes2{4, 5, 6, 7, 8, 9}; //2nd part of payload
-    stream << bytes2;
-    stream.handleMessages(server, connection);
-    REQUIRE(connection.payloads == (vector<Payload>{{1, 2, 3, 4, 5, 6, 7, 8, 9}}));
+    const vector<ubyte> bytes2{4, 5, 6, 7, 8}; //2nd part of payload
+    const auto numBytes2 = readInto(stream, bytes2);
+    stream.handleMessages(numBytes2, server, connection);
+    REQUIRE(connection.payloads == (vector<Payload>{{1, 2, 3, 4, 5, 6, 7, 8}}));
 }
