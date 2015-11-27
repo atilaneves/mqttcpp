@@ -42,7 +42,9 @@ void DlangServer::doAccept() {
                            [this](boost::system::error_code error) {
                                if(!_acceptor.is_open()) return;
                                if(!error) {
-                                   _connections.emplace_back(make_shared<DlangConnection>(move(_socket)));
+                                   auto conn = make_shared<DlangConnection>(move(_socket));
+                                   _connections.emplace_back(conn);
+                                   conn->start();
                                }
 
                                doAccept();
@@ -55,7 +57,6 @@ DlangConnection::DlangConnection(boost::asio::ip::tcp::socket&& socket):
     _dlangSubscriber{newDlangSubscriber(this)}
 {
 
-    //doRead();
 }
 
 void DlangConnection::doRead() {
@@ -66,8 +67,10 @@ void DlangConnection::doRead() {
     _socket.async_read_some(boost::asio::buffer(buffer.ptr, buffer.size),
         [this, self](boost::system::error_code error, std::size_t numBytes) {
             if(!error) {
-                cout << "Read " << numBytes << endl;
-                _dlangSubscriber->handleMessages(numBytes);
+                auto exMsg = _dlangSubscriber->handleMessages(numBytes);
+                if(exMsg) {
+                    throw runtime_error(exMsg);
+                }
                 doRead();
             } else if(error != boost::asio::error::operation_aborted) {
                 stop();

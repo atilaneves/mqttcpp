@@ -1,7 +1,8 @@
 import mqttd.server;
 import mqttd.stream;
 import std.typecons;
-import core.stdc.stdlib;
+import std.string;
+import core.memory;
 
 
 struct Span {
@@ -18,10 +19,11 @@ extern(C++) {
 
     interface DlangSubscriber {
         Span getWriteableBuffer();
-        void handleMessages(long numBytesRead);
+        const(char)* handleMessages(long numBytesRead);
     }
 
     void startMqttServer(bool useCache) {
+        GC.disable;
         gServer = typeof(gServer)(useCache ? Yes.useCache : No.useCache);
     }
 
@@ -36,12 +38,14 @@ private inout(Span) arrayToSpan(inout(ubyte)[] bytes) {
 
 private class Subscriber: DlangSubscriber {
     this(CppConnection connection) {
+        _stream = MqttStream(512 * 1024);
         _subscriber = SubscriberImpl(connection);
     }
 
     static struct SubscriberImpl {
 
         void newMessage(in ubyte[] bytes) {
+            assert(bytes.length > 0);
             _cppConnection.newMessage(arrayToSpan(bytes));
         }
 
@@ -57,8 +61,13 @@ private class Subscriber: DlangSubscriber {
             return arrayToSpan(_stream.buffer());
         }
 
-        void handleMessages(long numBytesRead) {
-            _stream.handleMessages(gServer, _subscriber);
+        const(char)* handleMessages(long numBytesRead) {
+            try {
+                _stream.handleMessages(numBytesRead, gServer, _subscriber);
+                return null;
+            } catch(Throwable t) {
+                return t.msg.toStringz();
+            }
         }
     }
 

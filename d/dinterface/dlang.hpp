@@ -19,7 +19,7 @@ class DlangSubscriber {
 public:
 
     virtual Span getWriteableBuffer() = 0;
-    virtual void handleMessages(long numBytesRead) = 0;
+    virtual const char* handleMessages(long numBytesRead) = 0;
 };
 
 void startMqttServer(bool useCache);

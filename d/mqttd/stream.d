@@ -42,7 +42,7 @@ struct MqttStream {
         read(new Input, bytes.length);
     }
 
-    void read(T)(auto ref T input, unsigned size) @trusted if(isMqttInput!T) {
+    void read(T)(auto ref T input, uint size) @trusted if(isMqttInput!T) {
         resetBuffer;
 
         immutable end = _bytesRead + size;
@@ -74,13 +74,41 @@ struct MqttStream {
         resetBuffer;
     }
 
+    void handleMessages(T)(long numBytes, ref MqttServer!T server, ref T connection) @trusted if(isMqttSubscriber!T) {
+        auto slice = _buffer[0 .. _bytesRead + numBytes];
+        auto totLen = totalLength(slice);
+
+        while(slice.length >= totLen) {
+            const auto msg = slice[0..totLen];
+            slice = slice[totLen..$];
+            server.newMessage(connection, msg);
+            totLen = totalLength(slice);
+        }
+
+        //shift everything to the beginning
+        //it's okay to overlap in practice
+        copy(slice, _buffer);
+        _bytesRead = slice.length;
+    }
+
+    static int totalLength(in ubyte[] bytes) {
+        if(bytes.length < MqttFixedHeader.SIZE) return MqttFixedHeader.SIZE;
+        auto dec = Decerealiser(bytes);
+        return dec.value!MqttFixedHeader.remaining + MqttFixedHeader.SIZE;
+    }
+
     auto bufferSize() const pure nothrow @safe {
         return _buffer.length;
     }
 
     ubyte[] buffer() {
-        writeln("Returning buffer of size: ", _buffer[_bytesRead .. $].length);
         return _buffer[_bytesRead .. $];
+    }
+
+    void preHandle(long size) {
+        _bytesRead += size;
+        _bytes = _buffer[0 .. _bytesRead];
+        updateLastMessageSize;
     }
 
 private:

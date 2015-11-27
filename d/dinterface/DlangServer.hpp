@@ -17,6 +17,7 @@ public:
     void newMessage(Span bytes) override ;
     void disconnect() override;
 
+    void start() { doRead(); }
     void stop() { _socket.close(); }
 
 private:
