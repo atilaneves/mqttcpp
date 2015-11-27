@@ -71,10 +71,16 @@ struct MqttStream {
 
     void handleMessages(T)(ref MqttServer!T server, ref T connection) @trusted if(isMqttSubscriber!T) {
         while(hasMessages) server.newMessage(connection, popNextMessageBytes);
+        resetBuffer;
     }
 
     auto bufferSize() const pure nothrow @safe {
         return _buffer.length;
+    }
+
+    ubyte[] buffer() {
+        writeln("Returning buffer of size: ", _buffer[_bytesRead .. $].length);
+        return _buffer[_bytesRead .. $];
     }
 
 private:

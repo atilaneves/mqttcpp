@@ -51,19 +51,23 @@ void DlangServer::doAccept() {
 
 
 DlangConnection::DlangConnection(boost::asio::ip::tcp::socket&& socket):
-    _socket{std::move(socket)}
+    _socket{std::move(socket)},
+    _dlangSubscriber{newDlangSubscriber(this)}
 {
+
+    doRead();
 }
 
 void DlangConnection::doRead() {
     if(!_connected) return;
 
     auto self(shared_from_this());
-    const auto buffer = getWriteableBuffer();
+    const auto buffer = _dlangSubscriber->getWriteableBuffer();
     _socket.async_read_some(boost::asio::buffer(buffer.ptr, buffer.size),
         [this, self](boost::system::error_code error, std::size_t numBytes) {
             if(!error) {
-                handleMessages(numBytes, *this);
+                cout << "Read " << numBytes << endl;
+                _dlangSubscriber->handleMessages(numBytes);
                 doRead();
             } else if(error != boost::asio::error::operation_aborted) {
                 stop();

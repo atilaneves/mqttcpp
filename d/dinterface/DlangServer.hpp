@@ -10,7 +10,7 @@
 #include "dlang.hpp"
 
 
-class DlangConnection: public std::enable_shared_from_this<DlangConnection>, public DlangSubscriber {
+class DlangConnection: public std::enable_shared_from_this<DlangConnection>, public CppConnection {
 public:
 
     DlangConnection(boost::asio::ip::tcp::socket&& socket);
@@ -23,6 +23,7 @@ private:
 
     boost::asio::ip::tcp::socket _socket;
     bool _connected{true};
+    DlangSubscriber* _dlangSubscriber;
 
     void doRead();
 

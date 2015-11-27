@@ -9,19 +9,21 @@ struct Span {
     long size;
 };
 
-class DlangSubscriber {
+class CppConnection {
 public:
-
     virtual void newMessage(Span bytes) = 0;
     virtual void disconnect() = 0;
 };
 
-//doesn't have to have C linkage but it's easier for other languages
-extern "C" {
-    void startMqttServer(bool useCache);
-    Span getWriteableBuffer();
-    void handleMessages(long numBytesRead, DlangSubscriber& subscriber);
-}
+class DlangSubscriber {
+public:
+
+    virtual Span getWriteableBuffer() = 0;
+    virtual void handleMessages(long numBytesRead) = 0;
+};
+
+void startMqttServer(bool useCache);
+DlangSubscriber* newDlangSubscriber(CppConnection* connection);
 
 
 #endif // DLANG_H_
