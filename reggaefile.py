@@ -39,4 +39,16 @@ ut_objs = object_files(flags=flags,
 ut = link(exe_name='ut',
           dependencies=[ut_objs, mqttlib, cereal])
 
-build = Build(mqtt, ut)
+# hybrid D/C++ binary
+hyb_cpp_objs = object_files(flags=flags,
+                            includes=includes,
+                            src_dirs=['d/dinterface'])
+hyb_d_objs = object_files(flags='',
+                          includes=['d'],
+                          src_dirs=['d/mqttd', 'd/cerealed'],
+                          src_files=['d/impl.d'])
+hybrid = link(exe_name='hybrid',
+              flags='-L-lstdc++ -L-lboost_system -L-lpthread',
+              dependencies=[hyb_cpp_objs, hyb_d_objs])
+
+build = Build(mqtt, ut, hybrid)
