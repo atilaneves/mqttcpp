@@ -16,12 +16,12 @@ if(NOT CMAKE_BUILD_TYPE)
       FORCE)
 endif(NOT CMAKE_BUILD_TYPE)
 
-set(MY_COMMON_FLAGS "-Wall -Wextra -Werror")
+set(MY_COMMON_FLAGS "-std=c++14 -Wall -Wextra -Werror")
 set(MY_FLAGS_DEBUG "${MY_COMMON_FLAGS} -g -fno-inline")
 set(MY_FLAGS_RELEASE "${MY_COMMON_FLAGS} -O3 -flto")
 
-set(CMAKE_CXX_FLAGS_DEBUG "${MY_FLAGS_DEBUG} -std=c++14")
-set(CMAKE_CXX_FLAGS_RELEASE "${MY_FLAGS_RELEASE} -std=c++14")
+set(CMAKE_CXX_FLAGS_DEBUG "${MY_FLAGS_DEBUG}")
+set(CMAKE_CXX_FLAGS_RELEASE "${MY_FLAGS_RELEASE}")
 
 message("Build type is ${CMAKE_BUILD_TYPE}")
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
@@ -63,6 +63,7 @@ endif()
 file(GLOB_RECURSE TEST_SRCS
   tests/*.cpp
   )
+
 
 add_executable(ut ${TEST_SRCS})
 target_link_libraries(ut mqttpure)

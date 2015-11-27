@@ -3,3 +3,4 @@ debug
 release
 .dir-locals.el
 bin
+__pycache__
