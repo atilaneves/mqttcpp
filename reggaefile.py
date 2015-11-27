@@ -31,12 +31,12 @@ main_objs = object_files(flags=flags,
                          src_files=['main.cpp'])
 mqtt = link(exe_name='mqtt',
             flags='-lboost_system -lpthread',
-            dependencies=target_concat(main_objs, mqttlib, cereal))
+            dependencies=[main_objs, mqttlib, cereal])
 
 ut_objs = object_files(flags=flags,
                        src_dirs=['tests'],
                        includes=includes)
 ut = link(exe_name='ut',
-          dependencies=target_concat(ut_objs, mqttlib, cereal))
+          dependencies=[ut_objs, mqttlib, cereal])
 
 build = Build(mqtt, ut)
