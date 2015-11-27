@@ -25,12 +25,8 @@ extern(C++) {
         gServer = typeof(gServer)(useCache ? Yes.useCache : No.useCache);
     }
 
-    DlangSubscriber newDlangSubscriber(CppConnection connection) @nogc {
-        //for some reason new/emplace causes crashes
-        void[] chunk = calloc(1, Subscriber.sizeof)[0..Subscriber.sizeof];
-        auto sub = cast(Subscriber)chunk.ptr;
-        sub.__ctor(connection);
-        return sub;
+    DlangSubscriber newDlangSubscriber(CppConnection connection) {
+        return new Subscriber(connection);
     }
 }
 
@@ -39,7 +35,7 @@ private inout(Span) arrayToSpan(inout(ubyte)[] bytes) {
 }
 
 private class Subscriber: DlangSubscriber {
-    this(CppConnection connection) @nogc {
+    this(CppConnection connection) {
         _subscriber = SubscriberImpl(connection);
     }
 

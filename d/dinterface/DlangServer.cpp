@@ -55,7 +55,7 @@ DlangConnection::DlangConnection(boost::asio::ip::tcp::socket&& socket):
     _dlangSubscriber{newDlangSubscriber(this)}
 {
 
-    doRead();
+    //doRead();
 }
 
 void DlangConnection::doRead() {

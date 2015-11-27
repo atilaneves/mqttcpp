@@ -4,9 +4,15 @@
 
 using namespace std;
 
+extern "C" {
+    int rt_init();
+    int rt_term();
+}
+
 
 int main(int argc, char*[]) {
     cout << "C++/D MQTT server" << endl;
+    rt_init();
     try {
         constexpr int port = 1883;
         const auto useCache = argc < 2;
@@ -21,5 +27,6 @@ int main(int argc, char*[]) {
         return 1;
     }
 
+    rt_term();
     return 0;
 }
