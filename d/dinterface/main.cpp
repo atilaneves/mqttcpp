@@ -16,7 +16,9 @@ int main(int argc, char*[]) {
     try {
         constexpr int port = 1883;
         const auto useCache = argc < 2;
-        if(!useCache) {
+        if(useCache) {
+            cout << "Enabling the cache" << endl;
+        } else {
             cout << "Disabling the cache" << endl;
         }
         startMqttServer(useCache);
