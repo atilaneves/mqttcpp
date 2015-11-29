@@ -65,8 +65,104 @@ struct MqttBroker(S) if(isMqttSubscriber!S) {
 
 private:
 
+    enum PartType {
+        One, //+
+        Many, //#
+        Other, //anything else
+    }
+
+    static struct FastPart {
+        PartType type;
+        string key;
+    }
+
+    static struct PartToNodes {
+        static struct Entry {
+            string key;
+            Node* node;
+        }
+
+        Entry oneNode;  //+
+        Entry manyNode; //#
+        Node*[string] otherNodes;
+
+        Node** opBinaryRight(string op)(in string key) if(op == "in") {
+            switch(key) {
+            case "+":
+                return oneNode.node is null ? null : &oneNode.node;
+            case "#":
+                return manyNode.node is null ? null : &manyNode.node;
+            default:
+                return key in otherNodes;
+            }
+        }
+
+        Node** opBinaryRight(string op)(in FastPart fast) if(op == "in") {
+            final switch(fast.type) with(PartType) {
+            case One:
+                return oneNode.node is null ? null : &oneNode.node;
+            case Many:
+                return manyNode.node is null ? null : &manyNode.node;
+            case Other:
+                return fast.key in otherNodes;
+            }
+        }
+
+        ref Node* opIndex(in string key) pure nothrow @safe {
+            switch(key) {
+            case "+":
+                return oneNode.node;
+            case "#":
+                return manyNode.node;
+            default:
+                if(key !in otherNodes) otherNodes[key] = null;
+                return otherNodes[key];
+            }
+        }
+
+        ulong length() const pure nothrow @safe {
+            auto length = otherNodes.length;
+            if(oneNode.node) ++length;
+            if(manyNode.node) ++length;
+            return length;
+        }
+
+        int opApply(int delegate(ref string, ref Node*) dg) {
+            if(oneNode.node) {
+                immutable stop = dg(oneNode.key, oneNode.node);
+                if(stop) return stop;
+            }
+            if(manyNode.node) {
+                immutable stop = dg(manyNode.key, manyNode.node);
+                if(stop) return stop;
+            }
+
+            foreach(k, v; otherNodes) {
+                immutable stop = dg(k, v);
+                if(stop) return stop;
+            }
+
+            return 0;
+        }
+
+        void insert(in string key, Node* node) {
+            if(key in this) return;
+            switch(key) {
+            case "+":
+                oneNode = Entry(key, node);
+                break;
+            case "#":
+                manyNode = Entry(key, node);
+                break;
+            default:
+                otherNodes[key] = node;
+                break;
+            }
+        }
+    }
+
     static struct Node {
-        Node*[string] children;
+        PartToNodes children;
         Subscription!S[] leaves;
     }
 
@@ -83,7 +179,7 @@ private:
 
         //create if not already here
         const part = parts.front.idup;
-        if(part !in tree.children) tree.children[part] = new Node;
+        tree.children.insert(part, new Node);
 
         parts.popFront;
         return addOrFindNode(tree.children[part], parts);
@@ -98,22 +194,23 @@ private:
         }
     }
 
-    void publishImpl(R1, R2)(Node* tree, R1 pubParts, in string topic, R2 bytes)
-        if(isTopicRange!R1 && isInputRangeOf!(R2, ubyte))
+    void publishImpl(R1)(Node* tree, R1 pubParts, in string topic, in ubyte[] bytes)
+        if(isTopicRange!R1)
     {
+        static FastPart[3] partsToCheck = [FastPart(PartType.Other), FastPart(PartType.Many), FastPart(PartType.One)];
 
         if(pubParts.empty) return;
 
-        immutable front = pubParts.front;
+        partsToCheck[0].key = pubParts.front;
         pubParts.popFront;
 
-        foreach(part; only(front, "#", "+")) {
-            if(part in tree.children) {
-                auto node = tree.children[part];
+        foreach(part; partsToCheck) {
+            auto nodePtr = part in tree.children;
+            if(nodePtr) {
+                auto node = *nodePtr;
+                if(pubParts.empty || part.type == PartType.Many) publishNode(node, topic, bytes);
 
-                if(pubParts.empty || part == "#") publishNode(node, topic, bytes);
-
-                if(pubParts.empty && "#" in node.children) {
+                if(pubParts.empty && FastPart(PartType.Many) in node.children) {
                     //So that "finance/#" matches "finance"
                     publishNode(node.children["#"], topic, bytes);
                 }
