@@ -15,7 +15,7 @@ int main(int argc, char*[]) {
     rt_init();
     try {
         constexpr int port = 1883;
-        const auto useCache = argc < 2;
+        const auto useCache = argc > 1;
         if(useCache) {
             cout << "Enabling the cache" << endl;
         } else {

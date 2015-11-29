@@ -9,8 +9,10 @@ int main(int argc, char*[]) {
     cout << "C++ MQTT server" << endl;
     try {
         constexpr int port = 1883;
-        const auto useCache = argc < 2;
-        if(!useCache) {
+        const auto useCache = argc > 1;
+        if(useCache) {
+            cout << "Enabling the cache" << endl;
+        } else {
             cout << "Disabling the cache" << endl;
         }
         MqttTcpServer server(port, useCache);
