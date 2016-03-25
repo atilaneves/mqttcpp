@@ -43,7 +43,7 @@ matrix:
 
 install:
   - sudo apt-get update -qq
-  - sudo apt-get install -y libboost1.54-all-dev
+  - sudo apt-get install -y libboost-all-dev
   - mkdir build
 
 script: cd build && cmake -DCMAKE_BUILD_TYPE=Debug .. && make && ./ut
