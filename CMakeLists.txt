@@ -16,7 +16,7 @@ if(NOT CMAKE_BUILD_TYPE)
       FORCE)
 endif(NOT CMAKE_BUILD_TYPE)
 
-set(MY_COMMON_FLAGS "-std=c++14 -Wall -Wextra -Werror")
+set(MY_COMMON_FLAGS "-std=c++1y -Wall -Wextra -Werror")
 set(MY_FLAGS_DEBUG "${MY_COMMON_FLAGS} -g -fno-inline")
 set(MY_FLAGS_RELEASE "${MY_COMMON_FLAGS} -O3 -flto")
 
