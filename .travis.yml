@@ -1,5 +1,7 @@
 # Use new trusty images, should yield newer compilers and packages
 # Copied from https://github.com/genbattle/dkm/blob/9c893efb556516f4b121a6201b66e000f838dd59/.travis.yml
+# Then modified as required
+
 sudo: required
 dist: precise
 language: cpp
@@ -30,7 +32,7 @@ matrix:
 
 install:
   - sudo apt-get update -qq
-  - sudo apt-get install -y libboost-all-dev
+  - sudo apt-get install -y libboost1.55-all-dev
   - mkdir build
   - export CC=$CC_COMPILER
   - export CXX=$CXX_COMPILER
