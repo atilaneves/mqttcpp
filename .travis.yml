@@ -12,28 +12,10 @@ matrix:
           sources:
             - ubuntu-toolchain-r-test
           packages:
-            - g++-4.9
-      env:
-        - COMPILER=g++-4.9
-    - compiler: gcc
-      addons:
-        apt:
-          sources:
-            - ubuntu-toolchain-r-test
-          packages:
             - g++-5
       env:
-        - COMPILER=g++-5
-    - compiler: clang
-      addons:
-        apt:
-          sources:
-            - ubuntu-toolchain-r-test
-            - llvm-toolchain-precise-3.6
-          packages:
-            - clang-3.6
-      env:
-        - COMPILER=clang++-3.6
+        - CC_COMPILER=gcc-5
+        - CXX_COMPILER=g++-5
     - compiler: clang
       addons:
         apt:
@@ -43,13 +25,14 @@ matrix:
           packages:
             - clang-3.7
       env:
-        - COMPILER=clang++-3.7
+        - CC_OMPILER=clang-3.7
+        - CXX_OMPILER=clang++-3.7
 
 install:
   - sudo apt-get update -qq
   - sudo apt-get install -y libboost-all-dev
   - mkdir build
-  - export CXX=$COMPILER
-  - export CC=$COMPILER
+  - export CC=$CC_COMPILER
+  - export CXX=$CXX_COMPILER
 
 script: cd build && cmake -DCMAKE_BUILD_TYPE=Debug .. && make && ./ut
