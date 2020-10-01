@@ -1,4 +1,5 @@
 mqtt
+Boost the Docs
 =============
 [![Build Status](https://travis-ci.org/atilaneves/mqttcpp.png?branch=master)](https://travis-ci.org/atilaneves/mqttcpp)
 
